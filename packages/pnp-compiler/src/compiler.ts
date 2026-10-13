@@ -1,6 +1,7 @@
 import {
   ScenarioManifest,
   SigilResonanceMatrix,
+  SeededPRNG,
   resolveRolesForPlayerCount
 } from '@escape-system/contracts';
 import { renderFrenchFoldSvg, FrenchFoldSheetData } from './templates/french-fold.js';
@@ -20,6 +21,8 @@ export interface PnpPage {
   title: string;
   category: 'common' | 'dossier' | 'verification';
   assignedRoles?: string[];
+  isSealedReward?: boolean;
+  verificationSeal?: string;
   svg: string;
 }
 
@@ -42,6 +45,7 @@ export interface PnpOutput {
     playerCount: number;
     commonSheetsCount: number;
     dossierSheetsCount: number;
+    sealedEnvelopesCount: number;
   };
 }
 
@@ -52,31 +56,52 @@ export class PnpCompiler {
     const includeGrid = options.includeVerificationGrid ?? true;
     const isSingleSided = options.singleSidedManualMark ?? false;
 
-    // Resolve roles distribution
+    // Resolve role distribution
     const assignedSlots = resolveRolesForPlayerCount(manifest.roleAggregation, options.playerCount);
 
-    // Setup verification matrix
+    // Setup PRNG and verification matrix
+    const rng = new SeededPRNG(`${seed}-compiler`);
     const matrix = new SigilResonanceMatrix(seed);
-    const puzzleNodes = Object.values(manifest.nodes).filter(n => n.type === 'puzzle' && n.puzzle);
-    
-    puzzleNodes.forEach(node => {
-      if (node.puzzle) {
-        matrix.registerPuzzle(
-          node.id,
-          node.puzzle.lockSigil,
-          node.puzzle.solutionKey.join(''),
-          `SEAL-${node.id.slice(0, 4).toUpperCase()}`,
-          node.transitions[0]?.targetRefId ?? `Envelope #${node.id}`
-        );
+
+    // Track sealed target elements (solving X rewards access to sealed element Y)
+    // Map of targetNodeId -> { seal: string; envelopeRef: string; unlockedByPuzzleId: string }
+    const sealedTargetMap = new Map<string, { seal: string; envelopeRef: string; unlockedByPuzzleId: string }>();
+
+    for (const [nodeId, node] of Object.entries(manifest.nodes)) {
+      if (node.type === 'puzzle' && node.puzzle) {
+        for (const transition of node.transitions) {
+          // Only transitions configured with 'open_envelope' reward access to a sealed physical element
+          if (transition.revealType === 'open_envelope') {
+            const targetNode = manifest.nodes[transition.targetNodeId];
+            const explicitSeal = targetNode?.content.physicalFallback?.sealId;
+            const generatedSeal = explicitSeal ?? `♈︎ ${rng.nextInt(10, 99)}`;
+            const envelopeRef = transition.targetRefId ?? targetNode?.content.physicalFallback?.label ?? `Envelope #${transition.targetNodeId}`;
+
+            sealedTargetMap.set(transition.targetNodeId, {
+              seal: generatedSeal,
+              envelopeRef,
+              unlockedByPuzzleId: nodeId
+            });
+
+            // Register puzzle in offline verification matrix
+            matrix.registerPuzzle(
+              nodeId,
+              node.puzzle.lockSigil,
+              node.puzzle.solutionKey.join(''),
+              generatedSeal,
+              envelopeRef
+            );
+          }
+        }
       }
-    });
+    }
 
     const commonPages: PnpPage[] = [];
     const playerDossiers: PlayerDossier[] = [];
     const allPages: PnpPage[] = [];
 
-    // 1. Build Verification Grid Page if requested
-    if (includeGrid && puzzleNodes.length > 0) {
+    // 1. Build Verification Grid Page if requested and if any sealed rewards exist
+    if (includeGrid && sealedTargetMap.size > 0) {
       const gridMatrix = matrix.generateLookupGrid();
       const gridSvg = renderResonanceGridSvg(gridMatrix, `${manifest.title} - Verification Matrix`);
       const gridPage: PnpPage = {
@@ -95,15 +120,18 @@ export class PnpCompiler {
       : (d: FrenchFoldSheetData) => renderFrenchFoldSvg(d);
 
     for (const [nodeId, node] of Object.entries(manifest.nodes)) {
-      const lockSigil = node.puzzle?.lockSigil ?? '✦';
-      const verificationSeal = node.puzzle
-        ? `SEAL-${node.id.slice(0, 4).toUpperCase()}`
-        : 'OPEN';
+      // Check if this sheet itself is a sealed reward unlocked by another puzzle
+      const sealedReward = sealedTargetMap.get(nodeId);
+      const isSealedReward = !!sealedReward;
+      const verificationSeal = sealedReward ? sealedReward.seal : undefined;
+
+      const sheetLabel = node.content.physicalFallback?.label ?? (isSealedReward ? sealedReward!.envelopeRef : node.title);
+      const lockSigil = node.puzzle?.lockSigil ?? node.content.physicalFallback?.lockSigil;
 
       const roleIds = node.visibility?.type === 'role' ? node.visibility.roleIds : undefined;
 
       const sheetData: FrenchFoldSheetData & ParallelFoldSheetData = {
-        itemRefId: node.transitions[0]?.targetRefId ?? `Ref #${nodeId}`,
+        sheetId: sheetLabel,
         title: node.title,
         lockSigil,
         verificationSeal,
@@ -111,7 +139,7 @@ export class PnpCompiler {
         interiorBody: node.content.narrativeText ?? 'Concealed room inspection data.',
         roleTags: roleIds,
         singleSidedNote: isSingleSided
-          ? 'Single-sided print: Write glyph on back before folding.'
+          ? 'Single-sided print: Write ID on back before folding.'
           : undefined
       };
 
@@ -123,6 +151,8 @@ export class PnpCompiler {
         title: node.title,
         category: isRoleSpecific ? 'dossier' : 'common',
         assignedRoles: roleIds,
+        isSealedReward,
+        verificationSeal,
         svg
       };
 
@@ -159,7 +189,8 @@ export class PnpCompiler {
         totalSheets: allPages.length,
         playerCount: options.playerCount,
         commonSheetsCount: commonPages.length,
-        dossierSheetsCount
+        dossierSheetsCount,
+        sealedEnvelopesCount: sealedTargetMap.size
       }
     };
   }

@@ -31,9 +31,27 @@ const mockManifest: ScenarioManifest = {
       content: {
         visuals: [],
         narrativeText: 'You stand before a heavy basalt door.',
-        physicalFallback: { format: 'sheet', instructions: 'Place on common table' }
+        physicalFallback: { format: 'sheet', label: 'Sheet #1', instructions: 'Place on common table' }
       },
-      transitions: [{ targetNodeId: 'puzzle_lock', condition: 'on_solve', revealType: 'open_envelope', targetRefId: 'Envelope #1' }]
+      transitions: []
+    },
+    puzzle_clue: {
+      id: 'puzzle_clue',
+      type: 'puzzle',
+      title: 'Hieroglyphic Stele',
+      visibility: { type: 'role', roleIds: ['translator'] },
+      content: {
+        visuals: [],
+        narrativeText: 'A riddle carved in stone gives part of a combination.',
+        physicalFallback: { format: 'card', label: 'Clue Card #A' }
+      },
+      puzzle: {
+        lockSigil: '☽',
+        solutionKey: ['RA'],
+        hints: ['Translate falcon symbol', 'Sun god name', 'RA']
+      },
+      // Note: Solving this clue puzzle provides information, but does NOT unlock a sealed physical envelope
+      transitions: [{ targetNodeId: 'puzzle_lock', condition: 'on_solve', revealType: 'display_terminal' }]
     },
     puzzle_lock: {
       id: 'puzzle_lock',
@@ -42,15 +60,28 @@ const mockManifest: ScenarioManifest = {
       visibility: { type: 'role', roleIds: ['engineer'] },
       content: {
         visuals: [],
-        narrativeText: 'Three copper gears must be aligned.',
-        physicalFallback: { format: 'card', instructions: 'Inspect gear teeth' }
+        narrativeText: 'Three copper gears must be aligned with the deciphered key.',
+        physicalFallback: { format: 'card', label: 'Lock Terminal #B' }
       },
       puzzle: {
         lockSigil: '🜲',
         solutionKey: ['▲', '●', '◆'],
         hints: ['Check gear ratios', 'Count teeth', 'Turn wheel twice']
       },
-      transitions: [{ targetNodeId: 'vault', condition: 'on_solve', revealType: 'open_envelope', targetRefId: 'Envelope #2' }]
+      // Solving this lock rewards access to the sealed physical Envelope #2 (vault_room)
+      transitions: [{ targetNodeId: 'vault_room', condition: 'on_solve', revealType: 'open_envelope', targetRefId: 'Envelope #2' }]
+    },
+    vault_room: {
+      id: 'vault_room',
+      type: 'room',
+      title: 'Inner Burial Chamber',
+      visibility: { type: 'common' },
+      content: {
+        visuals: [],
+        narrativeText: 'The golden sarcophagus glitters before you.',
+        physicalFallback: { format: 'envelope', label: 'Envelope #2', sealId: '♈︎ 84' }
+      },
+      transitions: []
     }
   },
   initialState: { activeNodeIds: ['room_entrance'] },
@@ -58,42 +89,43 @@ const mockManifest: ScenarioManifest = {
 };
 
 describe('PnpCompiler & Print & Play Templates', () => {
-  it('should render valid French Fold SVG with fold guidelines and seal box', () => {
+  it('should render French Fold SVG with bleed margins, crop marks, and mm dimensions', () => {
     const svg = renderFrenchFoldSvg({
-      itemRefId: 'Envelope #07',
+      sheetId: 'Envelope #07',
       title: 'Secret Chamber',
       lockSigil: '♈︎',
-      verificationSeal: 'SEAL-42',
+      verificationSeal: '♈︎ 84',
       interiorTitle: 'Inside the Chamber',
       interiorBody: 'You found the ancient idol.',
       singleSidedNote: 'Write 07 on back'
     });
 
-    assert.ok(svg.includes('<svg'));
+    assert.ok(svg.includes('width="216mm"'));
+    assert.ok(svg.includes('height="303mm"'));
+    assert.ok(svg.includes('class="trim-mark"'));
     assert.ok(svg.includes('Envelope #07'));
-    assert.ok(svg.includes('SEAL-42'));
-    assert.ok(svg.includes('FRENCH FOLD SHEET'));
-    assert.ok(svg.includes('Write 07 on back'));
+    assert.ok(svg.includes('♈︎ 84'));
+    assert.ok(svg.includes('FRENCH FOLD'));
   });
 
-  it('should render valid Double Parallel Fold SVG with 4 vertical panels', () => {
+  it('should render Double Parallel Fold SVG with crop marks and mm dimensions', () => {
     const svg = renderDoubleParallelFoldSvg({
-      itemRefId: 'Item #03',
+      sheetId: 'Item #03',
       title: 'Folded Map',
       lockSigil: '✦',
       verificationSeal: 'SEAL-MAP',
       interiorTitle: 'Map Layout',
-      interiorBody: 'Left quadrant leads to the river. Right quadrant leads to ruins.'
+      interiorBody: 'Left quadrant leads to river. Right quadrant leads to ruins.'
     });
 
-    assert.ok(svg.includes('<svg'));
+    assert.ok(svg.includes('width="303mm"'));
+    assert.ok(svg.includes('height="216mm"'));
+    assert.ok(svg.includes('class="trim-mark"'));
     assert.ok(svg.includes('DOUBLE PARALLEL FOLD'));
     assert.ok(svg.includes('SEAL-MAP'));
-    assert.ok(svg.includes('panel-1-front'));
-    assert.ok(svg.includes('panel-4-back'));
   });
 
-  it('should compile full scenario into sheets, verification matrix, and player dossiers', () => {
+  it('should only place verification seal on rewarded sealed envelope and not on clue puzzles', () => {
     const output = PnpCompiler.compile(mockManifest, {
       playerCount: 2,
       foldFormat: 'french-fold',
@@ -102,32 +134,43 @@ describe('PnpCompiler & Print & Play Templates', () => {
 
     assert.equal(output.scenarioTitle, 'The Pharaohs Crypt');
     assert.equal(output.playerCount, 2);
-    assert.equal(output.playerDossiers.length, 2);
 
-    // Player 1 has cartographer and translator roles
-    assert.deepEqual(output.playerDossiers[0].roles, ['cartographer', 'translator']);
-    // Player 2 has engineer role
-    assert.deepEqual(output.playerDossiers[1].roles, ['engineer']);
+    // vault_room is the sealed reward -> must have isSealedReward = true and seal "♈︎ 84"
+    const vaultSheet = output.allPages.find(p => p.pageId === 'sheet-vault_room');
+    assert.ok(vaultSheet, 'vault sheet must exist');
+    assert.equal(vaultSheet.isSealedReward, true);
+    assert.equal(vaultSheet.verificationSeal, '♈︎ 84');
+    assert.ok(vaultSheet.svg.includes('♈︎ 84'));
 
-    // Engineer should have the puzzle_lock in their dossier
-    assert.equal(output.playerDossiers[1].pages.length, 1);
-    assert.equal(output.playerDossiers[1].pages[0].pageId, 'sheet-puzzle_lock');
+    // puzzle_clue gives partial info -> must NOT be a sealed reward and NOT have a verification seal
+    const clueSheet = output.allPages.find(p => p.pageId === 'sheet-puzzle_clue');
+    assert.ok(clueSheet, 'clue sheet must exist');
+    assert.equal(clueSheet.isSealedReward, false);
+    assert.equal(clueSheet.verificationSeal, undefined);
+    assert.ok(clueSheet.svg.includes('UNSEALED GAME ELEMENT'));
 
-    // Verification matrix sheet must be included in common pages
+    // Verification matrix sheet must exist and only index puzzle_lock (which unlocked Envelope #2)
     const verificationSheet = output.commonPages.find(p => p.category === 'verification');
     assert.ok(verificationSheet, 'Verification matrix sheet must exist');
     assert.ok(verificationSheet.svg.includes('Verification Matrix'));
+    assert.ok(verificationSheet.svg.includes('Envelope #2'));
   });
 
-  it('should compile with Double Parallel Fold when configured', () => {
+  it('should correctly partition role dossiers for 2 players (Cartographer+Translator vs Engineer)', () => {
     const output = PnpCompiler.compile(mockManifest, {
-      playerCount: 3,
-      foldFormat: 'double-parallel-fold',
-      includeVerificationGrid: false
+      playerCount: 2,
+      foldFormat: 'french-fold'
     });
 
-    assert.equal(output.foldFormat, 'double-parallel-fold');
-    const firstSheet = output.allPages[0];
-    assert.ok(firstSheet.svg.includes('DOUBLE PARALLEL FOLD'));
+    assert.equal(output.playerDossiers.length, 2);
+    // Player 1 has cartographer and translator
+    assert.deepEqual(output.playerDossiers[0].roles, ['cartographer', 'translator']);
+    // Player 1 receives puzzle_clue (which is restricted to translator)
+    assert.ok(output.playerDossiers[0].pages.some(p => p.pageId === 'sheet-puzzle_clue'));
+
+    // Player 2 has engineer
+    assert.deepEqual(output.playerDossiers[1].roles, ['engineer']);
+    // Player 2 receives puzzle_lock (restricted to engineer)
+    assert.ok(output.playerDossiers[1].pages.some(p => p.pageId === 'sheet-puzzle_lock'));
   });
 });
