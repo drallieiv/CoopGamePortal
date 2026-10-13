@@ -19,14 +19,9 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "baseUrl": ".",
     "paths": {
-      "@escape-system/contracts": ["./packages/contracts/src/index.ts"],
-      "@escape-system/contracts/*": ["./packages/contracts/src/*"],
-      "@escape-system/server": ["./packages/server/src/index.ts"],
-      "@escape-system/server/*": ["./packages/server/src/*"],
-      "@escape-system/pnp-compiler": ["./packages/pnp-compiler/src/index.ts"],
-      "@escape-system/pnp-compiler/*": ["./packages/pnp-compiler/src/*"]
+      "@escape-system/contracts": ["./packages/contracts/dist/index.d.ts"],
+      "@escape-system/contracts/*": ["./packages/contracts/dist/*.d.ts"]
     }
   }
 }

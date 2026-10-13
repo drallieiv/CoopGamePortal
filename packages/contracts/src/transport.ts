@@ -138,3 +138,30 @@ export interface SessionTransport {
   on<T = unknown>(type: string, handler: TransportListener<T>): UnsubscribeFn;
   onStatusChange?(handler: (status: TransportStatus) => void): UnsubscribeFn;
 }
+
+export function createMessage<T>(
+  type: string,
+  payload: T,
+  senderId?: string
+): string {
+  const message: TransportMessage<T> = {
+    type,
+    payload,
+    senderId,
+    timestamp: Date.now()
+  };
+  return JSON.stringify(message);
+}
+
+export function parseMessage(data: string): TransportMessage<unknown> | null {
+  try {
+    const parsed = JSON.parse(data) as TransportMessage<unknown>;
+    if (!parsed || typeof parsed.type !== 'string') {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
