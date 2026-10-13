@@ -22,7 +22,9 @@
     "baseUrl": ".",
     "paths": {
       "@escape-system/contracts": ["./packages/contracts/src/index.ts"],
-      "@escape-system/contracts/*": ["./packages/contracts/src/*"]
+      "@escape-system/contracts/*": ["./packages/contracts/src/*"],
+      "@escape-system/server": ["./packages/server/src/index.ts"],
+      "@escape-system/server/*": ["./packages/server/src/*"]
     }
   }
 }
