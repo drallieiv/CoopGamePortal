@@ -96,20 +96,22 @@ export class Room {
     member.presence.cursor = payload;
     member.presence.lastActive = Date.now();
 
-    // Broadcast cursor to other players who share the same focused element (or all if not scoped)
+    // Broadcast cursor to other players
     const cursorMsg = createMessage('cursor_move', payload, playerId);
     for (const [otherId, otherMember] of this.members.entries()) {
       if (otherId === playerId) {
         continue;
       }
-      if (
-        !payload.elementId ||
-        !otherMember.presence.focusedElementId ||
-        otherMember.presence.focusedElementId === payload.elementId
-      ) {
-        if (otherMember.ws.readyState === otherMember.ws.OPEN) {
-          otherMember.ws.send(cursorMsg);
+
+      // If scoped to an element, both must be focused on that exact same element
+      if (payload.elementId) {
+        if (otherMember.presence.focusedElementId !== payload.elementId) {
+          continue;
         }
+      }
+
+      if (otherMember.ws.readyState === otherMember.ws.OPEN) {
+        otherMember.ws.send(cursorMsg);
       }
     }
   }

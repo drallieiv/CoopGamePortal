@@ -161,7 +161,9 @@ describe('GameServer & Room Real-Time Sync', () => {
 
     await Promise.all([
       waitForMessage(wsA, 'room_joined'),
-      waitForMessage(wsB, 'room_joined')
+      waitForMessage(wsA, 'state_sync'),
+      waitForMessage(wsB, 'room_joined'),
+      waitForMessage(wsB, 'state_sync')
     ]);
 
     const statePromiseA = waitForMessage<StateSyncPayload>(wsA, 'state_sync');

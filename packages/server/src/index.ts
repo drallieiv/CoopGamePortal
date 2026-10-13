@@ -54,6 +54,13 @@ export class GameServer {
   stop(): Promise<void> {
     return new Promise((resolve) => {
       if (this.wss) {
+        for (const client of this.wss.clients) {
+          try {
+            client.terminate();
+          } catch {
+            // socket already terminated
+          }
+        }
         this.wss.close(() => {
           this.wss = null;
           this.rooms.clear();
@@ -66,6 +73,10 @@ export class GameServer {
   }
 
   protected handleConnection(ws: WebSocket): void {
+    ws.on('error', () => {
+      // Prevent unhandled socket error event from terminating process
+    });
+
     ws.on('message', (data: string | Buffer) => {
       const msgStr = typeof data === 'string' ? data : data.toString('utf-8');
       const message = parseMessage(msgStr);
@@ -98,6 +109,19 @@ export class GameServer {
         ws.send(createMessage('error', { code: 'BAD_REQUEST', message: 'roomId and playerId required' }));
         return;
       }
+
+      // If socket previously joined another room, leave it first
+      const existing = this.clientRoomMap.get(ws);
+      if (existing) {
+        const oldRoom = this.rooms.get(existing.roomId);
+        if (oldRoom) {
+          oldRoom.leave(existing.playerId);
+          if (oldRoom.getMemberCount() === 0) {
+            this.rooms.delete(existing.roomId);
+          }
+        }
+      }
+
       const room = this.getRoom(joinPayload.roomId);
       room.join(ws, joinPayload);
       this.clientRoomMap.set(ws, { roomId: joinPayload.roomId, playerId: joinPayload.playerId });
