@@ -55,7 +55,8 @@ export type TransitionCondition =
 export type RevealType =
   | 'open_envelope'
   | 'draw_card'
-  | 'display_terminal';
+  | 'display_terminal'
+  | 'provide_clue';
 
 export interface NodeTransition {
   targetNodeId: string;
