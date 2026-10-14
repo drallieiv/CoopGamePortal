@@ -1,0 +1,28 @@
+{
+  "name": "@escape-system/studio",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test src/**/*.spec.ts"
+  },
+  "dependencies": {
+    "@angular/common": "^22.2.2",
+    "@angular/core": "^22.2.2",
+    "@angular/forms": "^22.2.2",
+    "@angular/platform-browser": "^22.2.2",
+    "@escape-system/contracts": "*",
+    "@escape-system/generators": "*",
+    "@escape-system/pnp-compiler": "*",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@angular/compiler": "^22.2.2",
+    "@angular/compiler-cli": "^22.2.2",
+    "@types/node": "^22.13.9",
+    "tsx": "^4.19.3",
+    "typescript": "^6.0.3"
+  }
+}
