@@ -18,7 +18,7 @@ export class HubServer {
       });
 
       this.server.on('error', reject);
-      this.server.listen(port, () => {
+      this.server.listen(port, '0.0.0.0', () => {
         const addr = this.server?.address();
         if (addr && typeof addr === 'object') {
           resolve(addr.port);

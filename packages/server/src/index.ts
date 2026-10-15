@@ -28,8 +28,19 @@ export class GameServer {
   start(port = 0, server?: Server): Promise<number> {
     return new Promise((resolve, reject) => {
       try {
-        const wssOptions = server ? { server } : { port };
-        this.wss = new WebSocketServer(wssOptions, () => {
+        if (server) {
+          this.wss = new WebSocketServer({ server });
+          this.wss.on('connection', (ws: WebSocket) => {
+            this.handleConnection(ws);
+          });
+          this.wss.on('error', (err) => {
+            reject(err);
+          });
+          resolve(port);
+          return;
+        }
+
+        this.wss = new WebSocketServer({ port }, () => {
           const address = this.wss?.address();
           if (address && typeof address === 'object') {
             resolve(address.port);
