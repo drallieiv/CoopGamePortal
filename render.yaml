@@ -1,0 +1,31 @@
+# Render Blueprint Specification (Infrastructure as Code)
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: coop-game-portal
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    region: frankfurt # Choices: frankfurt, oregon, ohio, singapore
+    branch: main
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # Render automatically supplies $PORT; the gateway dynamically binds to it
+      - key: PORT
+        value: 10000
+
+      # Auto-generated application secret for session tokens
+      - key: APP_SECRET
+        generateValue: true
+
+      # Placeholders for custom external credentials (uncomment & fill in Render dashboard)
+      # - key: DATABASE_URL
+      #   sync: false
+      # - key: STRIPE_API_KEY
+      #   sync: false
