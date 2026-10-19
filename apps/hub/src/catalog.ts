@@ -1,10 +1,11 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import type { ScenarioManifest } from '@escape-system/contracts';
 
 export interface ScenarioPackageMetadata {
   id: string;
   title: string;
   authorName: string;
-  authorId: string;
   difficulty: number;
   playerCount: { min: number; max: number; recommended: number };
   tags: string[];
@@ -14,110 +15,125 @@ export interface ScenarioPackageMetadata {
     currency?: string;
   };
   hasDemo: boolean;
-  publishedAt: number;
+  publishedAt: string;
   version: string;
 }
 
-export interface ScenarioPackage {
-  metadata: ScenarioPackageMetadata;
+export interface PublishScenarioRequest {
   manifest: ScenarioManifest;
+  tags?: string[];
+  pricing?: {
+    isFree: boolean;
+    priceCents?: number;
+    currency?: string;
+  };
+  hasDemo?: boolean;
 }
 
 export class ScenarioCatalog {
-  protected packages = new Map<string, ScenarioPackage>();
+  protected readonly scenarios = new Map<string, ScenarioManifest>();
+  protected readonly metadata = new Map<string, ScenarioPackageMetadata>();
 
   constructor() {
     this.seedDefaultScenarios();
   }
 
-  list(filters?: { tag?: string; minDifficulty?: number; isFree?: boolean }): ScenarioPackageMetadata[] {
-    let results = Array.from(this.packages.values()).map(p => p.metadata);
-
-    if (filters) {
-      if (filters.tag) {
-        results = results.filter(m => m.tags.includes(filters.tag!));
-      }
-      if (filters.minDifficulty !== undefined) {
-        results = results.filter(m => m.difficulty >= filters.minDifficulty!);
-      }
-      if (filters.isFree !== undefined) {
-        results = results.filter(m => m.pricing.isFree === filters.isFree);
-      }
+  list(options: { tag?: string; isFree?: boolean } = {}): ScenarioPackageMetadata[] {
+    let list = Array.from(this.metadata.values());
+    if (options.tag) {
+      const normalized = options.tag.toLowerCase();
+      list = list.filter((pkg) => pkg.tags.some((t) => t.toLowerCase() === normalized));
     }
-
-    return results;
+    if (options.isFree !== undefined) {
+      list = list.filter((pkg) => pkg.pricing.isFree === options.isFree);
+    }
+    return list;
   }
 
-  get(id: string): ScenarioPackage | null {
-    return this.packages.get(id) ?? null;
+  get(id: string): { metadata: ScenarioPackageMetadata; manifest: ScenarioManifest } | undefined {
+    const meta = this.metadata.get(id);
+    const manifest = this.scenarios.get(id);
+    if (!meta || !manifest) return undefined;
+    return { metadata: meta, manifest };
   }
 
-  publish(manifest: ScenarioManifest, metadataOverride?: Partial<ScenarioPackageMetadata>): ScenarioPackage {
-    if (!manifest.id || !manifest.title || !manifest.nodes) {
-      throw new Error('Invalid manifest: missing required fields (id, title, nodes)');
+  listScenarios(tag?: string): ScenarioPackageMetadata[] {
+    const list = Array.from(this.metadata.values());
+    if (!tag) {
+      return list;
+    }
+    const normalized = tag.toLowerCase();
+    return list.filter((pkg) => pkg.tags.some((t) => t.toLowerCase() === normalized));
+  }
+
+  getScenario(id: string): ScenarioManifest | undefined {
+    return this.scenarios.get(id);
+  }
+
+  getMetadata(id: string): ScenarioPackageMetadata | undefined {
+    return this.metadata.get(id);
+  }
+
+  publish(
+    manifest: ScenarioManifest,
+    options: {
+      tags?: string[];
+      pricing?: { isFree: boolean; priceCents?: number; currency?: string };
+      hasDemo?: boolean;
+    } = {}
+  ): ScenarioPackageMetadata {
+    if (!manifest.id || !manifest.title) {
+      throw new Error('Manifest must have a valid id and title');
     }
 
-    const metadata: ScenarioPackageMetadata = {
+    const pkgMeta: ScenarioPackageMetadata = {
       id: manifest.id,
       title: manifest.title,
       authorName: manifest.author?.name ?? 'Anonymous Creator',
-      authorId: manifest.author?.id ?? 'author-anon',
       difficulty: manifest.difficulty ?? 3,
-      playerCount: manifest.playerCount ?? { min: 1, max: 4, recommended: 3 },
-      tags: metadataOverride?.tags ?? ['escape-room', 'mystery'],
-      pricing: metadataOverride?.pricing ?? { isFree: true },
-      hasDemo: metadataOverride?.hasDemo ?? false,
-      publishedAt: Date.now(),
-      version: manifest.version ?? '1.0.0',
-      ...metadataOverride
+      playerCount: manifest.playerCount ?? { min: 1, max: 4, recommended: 2 },
+      tags: options.tags ?? ['community'],
+      pricing: options.pricing ?? { isFree: true },
+      hasDemo: options.hasDemo ?? false,
+      publishedAt: new Date().toISOString(),
+      version: manifest.version ?? '1.0.0'
     };
 
-    const pkg: ScenarioPackage = { metadata, manifest };
-    this.packages.set(manifest.id, pkg);
-    return pkg;
+    this.scenarios.set(manifest.id, manifest);
+    this.metadata.set(manifest.id, pkgMeta);
+
+    return pkgMeta;
   }
 
   protected seedDefaultScenarios(): void {
-    const sampleManifest: ScenarioManifest = {
-      id: 'pharaoh-crypt-01',
-      version: '1.0.0',
-      title: "The Pharaoh's Crypt",
-      author: { id: 'creator-drjones', name: 'Dr. Jones' },
-      difficulty: 3,
-      playerCount: { min: 1, max: 4, recommended: 3 },
-      roles: [
-        { id: 'cartographer', name: 'Cartographer', exclusiveDossiers: ['star_map'] },
-        { id: 'translator', name: 'Translator', exclusiveDossiers: ['hieroglyph_tablet'] },
-        { id: 'engineer', name: 'Engineer', exclusiveDossiers: ['gear_diagrams'] }
-      ],
-      roleAggregation: {
-        '3_players': [{ roles: ['cartographer'] }, { roles: ['translator'] }, { roles: ['engineer'] }],
-        '2_players': [{ roles: ['cartographer', 'translator'] }, { roles: ['engineer'] }],
-        '1_player_solo': [{ roles: ['cartographer', 'translator', 'engineer'] }]
-      },
-      nodes: {
-        antechamber: {
-          id: 'antechamber',
-          type: 'room',
-          title: 'Tomb Antechamber',
-          visibility: { type: 'common' },
-          content: { visuals: [], narrativeText: 'Dark basalt halls.', physicalFallback: { label: 'Sheet #1' } },
-          transitions: []
-        }
-      },
-      initialState: {
-        unlockedNodeIds: ['antechamber'],
-        solvedPuzzleIds: [],
-        activeDossiers: [],
-        inventory: []
-      },
-      seedConfig: { defaultSeed: 'EGYPT-404' }
-    };
+    // Dynamically load any scenario JSON files present in samples/ directory
+    const potentialPaths = [
+      path.resolve(process.cwd(), 'samples'),
+      path.resolve(process.cwd(), '../../samples'),
+      path.resolve('/home/a145777/perso/gameProject/samples')
+    ];
 
-    this.publish(sampleManifest, {
-      tags: ['egypt', 'crypt', 'asymmetric'],
-      pricing: { isFree: true },
-      hasDemo: false
-    });
+    let loadedAny = false;
+
+    for (const dir of potentialPaths) {
+      if (fs.existsSync(dir)) {
+        const files = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
+        for (const file of files) {
+          try {
+            const raw = fs.readFileSync(path.join(dir, file), 'utf-8');
+            const manifest = JSON.parse(raw) as ScenarioManifest;
+            this.publish(manifest, {
+              tags: [file.replace('.json', ''), 'official'],
+              pricing: { isFree: true },
+              hasDemo: true
+            });
+            loadedAny = true;
+          } catch {
+            // continue
+          }
+        }
+        if (loadedAny) break;
+      }
+    }
   }
 }

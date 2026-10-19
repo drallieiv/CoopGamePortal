@@ -27,6 +27,7 @@ const PLAYER_COLORS = [
 
 export class Room {
   readonly roomId: string;
+  protected hostSecret: string | null = null;
   protected readonly members = new Map<string, RoomMember>();
   protected gameState: Record<string, unknown> = {};
   protected stateVersion = 0;
@@ -50,10 +51,20 @@ export class Room {
 
   join(ws: WebSocket, payload: JoinRoomPayload): PlayerPresence {
     const colorIndex = this.members.size % PLAYER_COLORS.length;
+
+    if (payload.hostSecret && !this.hostSecret) {
+      this.hostSecret = payload.hostSecret;
+    }
+
+    const isHost = Boolean(payload.hostSecret && payload.hostSecret === this.hostSecret);
+
     const presence: PlayerPresence = {
       playerId: payload.playerId,
       playerName: payload.playerName,
       roleIds: payload.roleIds ?? [],
+      seatId: payload.seatId ?? (isHost ? (payload.roleIds?.[0] ?? null) : null),
+      seatName: payload.seatId ?? (isHost ? (payload.roleIds?.[0] ?? null) : null),
+      isHost,
       color: PLAYER_COLORS[colorIndex],
       lastActive: Date.now()
     };
@@ -146,6 +157,26 @@ export class Room {
     };
 
     this.broadcast('state_sync', payload);
+  }
+
+  assignSeat(callerPlayerId: string, payload: { targetPlayerId: string; seatId: string | null; seatName?: string | null; roleIds?: string[] }): boolean {
+    const caller = this.members.get(callerPlayerId);
+    if (!caller?.presence.isHost) {
+      return false;
+    }
+
+    const target = this.members.get(payload.targetPlayerId);
+    if (!target) {
+      return false;
+    }
+
+    target.presence.seatId = payload.seatId;
+    target.presence.seatName = payload.seatName ?? payload.seatId;
+    target.presence.roleIds = payload.roleIds ?? (payload.seatId ? [payload.seatId] : []);
+    target.presence.lastActive = Date.now();
+
+    this.broadcast('player_updated', target.presence);
+    return true;
   }
 
   protected broadcast<T>(type: string, payload: T, excludePlayerId?: string): void {

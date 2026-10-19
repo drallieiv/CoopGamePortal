@@ -9,9 +9,16 @@ import {
   type CursorMovePayload,
   type GameActionPayload,
   type StateSyncPayload,
+  type AssignSeatPayload,
   createMessage,
   parseMessage
 } from '@escape-system/contracts';
+
+function getWsDefaultUrl(): string {
+  if (typeof window === 'undefined') return 'ws://localhost:8080';
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${protocol}//${window.location.host}`;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -36,11 +43,12 @@ export class TransportService implements SessionTransport {
 
   protected listeners = new Map<string, Set<TransportListener>>();
 
-  connect(url = 'ws://localhost:8080'): Promise<void> {
+  connect(url?: string): Promise<void> {
+    const targetUrl = url ?? getWsDefaultUrl();
     return new Promise((resolve, reject) => {
       this._status.set('connecting');
       try {
-        this.ws = new WebSocket(url);
+        this.ws = new WebSocket(targetUrl);
 
         this.ws.onopen = () => {
           this._status.set('connected');
@@ -76,9 +84,14 @@ export class TransportService implements SessionTransport {
     this._remoteCursors.set(new Map());
   }
 
-  joinRoom(roomId: string, playerId: string, playerName: string, roleIds?: string[]): void {
-    const payload: JoinRoomPayload = { roomId, playerId, playerName, roleIds };
+  joinRoom(roomId: string, playerId: string, playerName: string, roleIds?: string[], hostSecret?: string): void {
+    const payload: JoinRoomPayload = { roomId, playerId, playerName, roleIds, hostSecret };
     this.send('join_room', payload);
+  }
+
+  assignSeat(targetPlayerId: string, seatId: string | null, seatName?: string | null, roleIds?: string[]): void {
+    const payload: AssignSeatPayload = { targetPlayerId, seatId, seatName, roleIds };
+    this.send('assign_seat', payload);
   }
 
   sendCursor(payload: CursorMovePayload): void {
@@ -112,56 +125,62 @@ export class TransportService implements SessionTransport {
     };
   }
 
-  protected handleIncoming(rawData: string): void {
-    const msg = parseMessage(rawData);
-    if (!msg) {
-      return;
-    }
+  protected handleIncoming(data: string): void {
+    const message = parseMessage(data);
+    if (!message) return;
 
-    switch (msg.type) {
+    switch (message.type) {
       case 'room_joined': {
-        const payload = msg.payload as { members: PlayerPresence[] };
-        this._players.set(payload.members ?? []);
+        const payload = message.payload as { members: PlayerPresence[] };
+        this._players.set(payload.members);
         break;
       }
       case 'player_joined': {
-        const presence = msg.payload as PlayerPresence;
+        const presence = message.payload as PlayerPresence;
         this._players.update((list) => [...list.filter((p) => p.playerId !== presence.playerId), presence]);
         break;
       }
+      case 'player_updated': {
+        const updated = message.payload as PlayerPresence;
+        this._players.update((list) => list.map((p) => (p.playerId === updated.playerId ? updated : p)));
+        break;
+      }
       case 'player_left': {
-        const payload = msg.payload as { playerId: string };
+        const payload = message.payload as { playerId: string };
         this._players.update((list) => list.filter((p) => p.playerId !== payload.playerId));
         this._remoteCursors.update((map) => {
-          const next = new Map(map);
-          next.delete(payload.playerId);
-          return next;
+          map.delete(payload.playerId);
+          return new Map(map);
         });
         break;
       }
       case 'cursor_move': {
-        const cursor = msg.payload as CursorMovePayload;
-        if (msg.senderId) {
+        const cursor = message.payload as CursorMovePayload;
+        if (message.senderId) {
           this._remoteCursors.update((map) => {
-            const next = new Map(map);
-            next.set(msg.senderId!, cursor);
-            return next;
+            map.set(message.senderId!, cursor);
+            return new Map(map);
           });
         }
         break;
       }
+      case 'presence_sync': {
+        const presence = message.payload as PlayerPresence;
+        this._players.update((list) => list.map((p) => (p.playerId === presence.playerId ? presence : p)));
+        break;
+      }
       case 'state_sync': {
-        const payload = msg.payload as StateSyncPayload;
+        const payload = message.payload as StateSyncPayload;
         this._gameState.set(payload.state as Record<string, unknown>);
         this._stateVersion.set(payload.version);
         break;
       }
     }
 
-    const set = this.listeners.get(msg.type);
-    if (set) {
-      for (const listener of set) {
-        listener(msg.payload);
+    const handlers = this.listeners.get(message.type);
+    if (handlers) {
+      for (const h of handlers) {
+        h(message.payload);
       }
     }
   }

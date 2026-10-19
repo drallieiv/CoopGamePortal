@@ -1,0 +1,63 @@
+{
+  "id": "pharaoh-crypt-01",
+  "version": "1.0.0",
+  "title": "The Pharaoh's Crypt",
+  "author": { "id": "creator-drjones", "name": "Dr. Jones" },
+  "difficulty": 3,
+  "playerCount": { "min": 1, "max": 4, "recommended": 3 },
+  "roles": [
+    { "id": "cartographer", "name": "Cartographer", "exclusiveDossiers": ["star_map"] },
+    { "id": "translator", "name": "Translator", "exclusiveDossiers": ["hieroglyph_tablet"] },
+    { "id": "engineer", "name": "Engineer", "exclusiveDossiers": ["gear_diagrams"] }
+  ],
+  "roleAggregation": {
+    "3_players": [{ "roles": ["cartographer"] }, { "roles": ["translator"] }, { "roles": ["engineer"] }],
+    "2_players": [{ "roles": ["cartographer", "translator"] }, { "roles": ["engineer"] }],
+    "1_player_solo": [{ "roles": ["cartographer", "translator", "engineer"] }]
+  },
+  "nodes": {
+    "antechamber": {
+      "id": "antechamber",
+      "type": "room",
+      "title": "Tomb Antechamber",
+      "visibility": { "type": "common" },
+      "content": {
+        "visuals": [],
+        "narrativeText": "Dark basalt halls echo with forgotten whispers.",
+        "physicalFallback": { "format": "french_fold", "label": "Sheet #1" }
+      },
+      "transitions": [
+        {
+          "targetNodeId": "lock_mechanism",
+          "condition": "on_solve",
+          "revealType": "open_envelope",
+          "targetRefId": "Envelope #1 (Burial Chamber)"
+        }
+      ]
+    },
+    "lock_mechanism": {
+      "id": "lock_mechanism",
+      "type": "puzzle",
+      "title": "Anubis Seal Lock",
+      "visibility": { "type": "role", "roleIds": ["engineer"] },
+      "content": {
+        "visuals": [],
+        "narrativeText": "Align the brass scarab dials.",
+        "physicalFallback": { "format": "card", "label": "Card #1", "sealId": "♈︎ 42" }
+      },
+      "puzzle": {
+        "lockSigil": "🜲",
+        "solutionKey": ["▲", "●", "◆"],
+        "hints": ["Count the teeth", "Ratio is 3:1", "Turn right twice"]
+      },
+      "transitions": []
+    }
+  },
+  "initialState": {
+    "unlockedNodeIds": ["antechamber"],
+    "solvedPuzzleIds": [],
+    "activeDossiers": ["star_map"],
+    "inventory": []
+  },
+  "seedConfig": { "defaultSeed": "EGYPT-404" }
+}

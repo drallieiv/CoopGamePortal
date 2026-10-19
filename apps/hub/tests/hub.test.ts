@@ -89,4 +89,36 @@ describe('Hub API & Scenario Marketplace', () => {
     assert.equal(json.manifest.title, 'The Cybernetic Vault');
     assert.equal(json.metadata.pricing.priceCents, 499);
   });
+
+  it('POST /api/sessions and GET /api/sessions/:roomId should manage in-memory game sessions', async () => {
+    const postRes = await fetch(`${baseUrl}/api/sessions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        roomId: 'ATLANTIS-5817',
+        hostSecret: 'secret-token-xyz',
+        scenarioId: 'fate-of-atlantis-01',
+        scenarioTitle: 'Indiana Jones and the Fate of Atlantis',
+        seed: '9k2f4x8m',
+        playerCount: 3,
+        playMode: 'online'
+      })
+    });
+
+    assert.equal(postRes.status, 201);
+
+    // Fetch session as joining player (without secret)
+    const getRes = await fetch(`${baseUrl}/api/sessions/ATLANTIS-5817`);
+    assert.equal(getRes.status, 200);
+    const session = await getRes.json() as { roomId: string; seed: string; isHost: boolean };
+    assert.equal(session.roomId, 'ATLANTIS-5817');
+    assert.equal(session.seed, '9k2f4x8m');
+    assert.equal(session.isHost, false);
+
+    // Fetch session as host (with secret)
+    const hostGetRes = await fetch(`${baseUrl}/api/sessions/ATLANTIS-5817?secret=secret-token-xyz`);
+    assert.equal(hostGetRes.status, 200);
+    const hostSession = await hostGetRes.json() as { isHost: boolean };
+    assert.equal(hostSession.isHost, true);
+  });
 });

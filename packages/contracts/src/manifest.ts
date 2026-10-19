@@ -5,6 +5,7 @@ export type NodeType =
   | 'puzzle'
   | 'item'
   | 'machine'
+  | 'combine'
   | 'dossier'
   | 'narrative';
 
@@ -151,6 +152,24 @@ export interface NodeContent {
   physicalFallback: PhysicalCardSpec;
 }
 
+export type BaseBehaviorComponent =
+  | 'SymbolIntersection'
+  | 'DirectionalSequence'
+  | 'ItemCombine'
+  | 'TravelUnlock'
+  | 'Custom';
+
+export interface NodeBehaviorSpec {
+  component?: BaseBehaviorComponent;
+  params?: Record<string, unknown>;
+  customScript?: string;
+  triggers?: Array<{
+    event: string;
+    action?: string;
+    script?: string;
+  }>;
+}
+
 export interface ScenarioNode {
   id: string;
   type: NodeType;
@@ -158,6 +177,7 @@ export interface ScenarioNode {
   visibility: VisibilityScope;
   content: NodeContent;
   puzzle?: PuzzleDefinition;
+  behavior?: NodeBehaviorSpec;
   transitions: NodeTransition[];
 }
 

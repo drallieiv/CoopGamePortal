@@ -24,6 +24,9 @@ export interface StudioNode {
   revealType?: RevealType;
   targetRefId?: string;
   visibility: VisibilityScope;
+  combineSourceAId?: string;
+  combineSourceBId?: string;
+  combineCommonCount?: 2 | 3;
 }
 
 export interface StudioTransitionWire {
@@ -167,6 +170,14 @@ export class GraphService {
           hints: node.hints ?? ['Nudge', 'Insight', 'Solution'],
           inputConfig: node.inputConfig
         } : undefined,
+        behavior: node.type === 'combine' ? {
+          component: 'SymbolIntersection',
+          params: {
+            itemAId: node.combineSourceAId,
+            itemBId: node.combineSourceBId,
+            commonCount: node.combineCommonCount ?? 3
+          }
+        } : undefined,
         transitions: node.targetNodeId && node.revealType ? [{
           targetNodeId: node.targetNodeId,
           condition: 'on_solve',
@@ -202,6 +213,46 @@ export class GraphService {
       },
       seedConfig: { defaultSeed: this.seed() }
     };
+  }
+
+  loadManifest(manifest: ScenarioManifest): void {
+    if (!manifest || !manifest.nodes) return;
+    this.scenarioTitle.set(manifest.title);
+    this.scenarioId.set(manifest.id);
+    this.difficulty.set((manifest.difficulty ?? 3) as 1 | 2 | 3 | 4 | 5);
+    if (manifest.seedConfig?.defaultSeed) {
+      this.seed.set(manifest.seedConfig.defaultSeed);
+    }
+
+    const loadedNodes: StudioNode[] = [];
+    let col = 0;
+
+    for (const node of Object.values(manifest.nodes)) {
+      const primaryTransition = node.transitions[0];
+      loadedNodes.push({
+        id: node.id,
+        type: node.type,
+        title: node.title,
+        x: 80 + (col % 4) * 300,
+        y: 80 + Math.floor(col / 4) * 220,
+        narrativeText: node.content.narrativeText,
+        lockSigil: node.puzzle?.lockSigil,
+        solutionKey: node.puzzle?.solutionKey,
+        hints: node.puzzle?.hints,
+        inputConfig: node.puzzle?.inputConfig,
+        targetNodeId: primaryTransition?.targetNodeId,
+        revealType: primaryTransition?.revealType,
+        targetRefId: primaryTransition?.targetRefId,
+        visibility: node.visibility,
+        combineSourceAId: node.behavior?.params?.itemAId as string | undefined,
+        combineSourceBId: node.behavior?.params?.itemBId as string | undefined,
+        combineCommonCount: (node.behavior?.params?.commonCount as 2 | 3) ?? 3
+      });
+      col++;
+    }
+
+    this._nodes.set(loadedNodes);
+    this._selectedNodeId.set(loadedNodes[0]?.id ?? null);
   }
 
   protected seedDefaultNodes(): void {

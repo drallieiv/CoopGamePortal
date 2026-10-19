@@ -43,10 +43,71 @@ import {
             <option value="room">Room / Location</option>
             <option value="puzzle">Puzzle / Lock</option>
             <option value="item">Physical Item / Card</option>
+            <option value="combine">🔀 Item Combine (Intersection)</option>
             <option value="machine">Interactive Machine / Widget</option>
             <option value="dossier">Confidential Role Dossier</option>
           </select>
         </div>
+
+        @if (node.type === 'combine') {
+          <div class="combine-config-box">
+            <h4>🔀 Dual Input Intersection Setup</h4>
+            
+            <div class="form-group">
+              <label>Input Port A (Source Element 1):</label>
+              <select
+                [ngModel]="node.combineSourceAId"
+                (ngModelChange)="onUpdate(node.id, { combineSourceAId: $event })"
+              >
+                <option [value]="undefined">-- Select First Element --</option>
+                @for (other of otherNodes(node.id); track other.id) {
+                  <option [value]="other.id">{{ other.type | uppercase }}: {{ other.title }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Input Port B (Source Element 2):</label>
+              <select
+                [ngModel]="node.combineSourceBId"
+                (ngModelChange)="onUpdate(node.id, { combineSourceBId: $event })"
+              >
+                <option [value]="undefined">-- Select Second Element --</option>
+                @for (other of otherNodes(node.id); track other.id) {
+                  <option [value]="other.id">{{ other.type | uppercase }}: {{ other.title }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Target Intersection Match Count:</label>
+              <select
+                [ngModel]="node.combineCommonCount ?? 3"
+                (ngModelChange)="onUpdate(node.id, { combineCommonCount: +$event })"
+              >
+                <option [value]="2">2 Common Symbols</option>
+                <option [value]="3">3 Common Symbols</option>
+              </select>
+            </div>
+
+            <!-- Downstream Checker Output Target -->
+            <div class="form-group" style="margin-top: 14px; border-top: 1px solid #dee2e6; padding-top: 10px;">
+              <label>Output Port ➔ Downstream Checker Node:</label>
+              <select
+                [ngModel]="node.targetNodeId"
+                (ngModelChange)="onTargetChange(node.id, $event)"
+              >
+                <option [value]="undefined">-- Select Checker Node --</option>
+                @for (other of otherNodes(node.id); track other.id) {
+                  <option [value]="other.id">{{ other.type | uppercase }}: {{ other.title }}</option>
+                }
+              </select>
+              <p class="hint" style="font-size: 11px; color: #6c757d; margin: 4px 0 0 0;">
+                The derived intersection symbols will be routed to this downstream checker node.
+              </p>
+            </div>
+          </div>
+        }
 
         <div class="form-group">
           <label>Narrative / Clue Text:</label>

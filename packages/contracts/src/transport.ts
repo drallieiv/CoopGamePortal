@@ -19,6 +19,9 @@ export interface PlayerPresence {
   cursor?: CursorPosition;
   focusedElementId?: string;
   lastActive: number;
+  seatId?: string | null;
+  seatName?: string | null;
+  isHost?: boolean;
 }
 
 /**
@@ -73,6 +76,15 @@ export interface JoinRoomPayload {
   roomId: string;
   playerId: string;
   playerName: string;
+  roleIds?: string[];
+  seatId?: string | null;
+  hostSecret?: string;
+}
+
+export interface AssignSeatPayload {
+  targetPlayerId: string;
+  seatId: string | null;
+  seatName?: string | null;
   roleIds?: string[];
 }
 

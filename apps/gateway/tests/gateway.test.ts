@@ -79,4 +79,41 @@ describe('PortalGateway Unified HTTP & WebSocket Router', () => {
 
     ws.close();
   });
+
+  it('POST /api/sessions and GET /api/admin/rooms should track and manage active rooms', async () => {
+    // Create session
+    const postRes = await fetch(`${baseUrl}/api/sessions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        roomId: 'ADMIN-TEST-99',
+        hostSecret: 'secret-99',
+        scenarioId: 'pharaoh-crypt-01',
+        scenarioTitle: "The Pharaoh's Crypt",
+        seed: 'testseed99',
+        playerCount: 2,
+        playMode: 'online'
+      })
+    });
+    assert.equal(postRes.status, 201);
+
+    // Unauthenticated admin access should fail
+    const unauthRes = await fetch(`${baseUrl}/api/admin/rooms`);
+    assert.equal(unauthRes.status, 401);
+
+    // Authenticated admin access should return rooms
+    const adminRes = await fetch(`${baseUrl}/api/admin/rooms`, {
+      headers: { Authorization: 'Bearer atlantis-admin' }
+    });
+    assert.equal(adminRes.status, 200);
+    const json = await adminRes.json() as { rooms: Array<{ roomId: string }>; totalCount: number };
+    assert.ok(json.rooms.some(r => r.roomId === 'ADMIN-TEST-99'));
+
+    // Terminate room
+    const termRes = await fetch(`${baseUrl}/api/admin/rooms/ADMIN-TEST-99/terminate`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer atlantis-admin' }
+    });
+    assert.equal(termRes.status, 200);
+  });
 });

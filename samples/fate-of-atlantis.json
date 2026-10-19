@@ -1,0 +1,419 @@
+{
+  "id": "fate-of-atlantis-01",
+  "version": "1.0.0",
+  "title": "Indiana Jones and the Fate of Atlantis: The Lost Dialogue",
+  "author": {
+    "id": "author-lucasarts",
+    "name": "Hal Barwood & Noah Falstein (Adapted)"
+  },
+  "difficulty": 4,
+  "playerCount": { "min": 1, "max": 4, "recommended": 3 },
+  "roles": [
+    {
+      "id": "indy",
+      "name": "Indiana Jones (The Field Archaeologist)",
+      "exclusiveDossiers": [
+        "indy_field_journal",
+        "whip_and_tools_guide",
+        "boiler_room_mechanics"
+      ]
+    },
+    {
+      "id": "sophia",
+      "name": "Sophia Hapgood (The Medium & Psychic)",
+      "exclusiveDossiers": [
+        "nur_ab_sal_telepathy_ledger",
+        "atlantean_celestial_sigils",
+        "felipe_costa_charm_notes"
+      ]
+    },
+    {
+      "id": "marcus",
+      "name": "Marcus Brody (The Curator & Navigator)",
+      "exclusiveDossiers": [
+        "barnett_college_archives_index",
+        "global_expedition_coordinates_ledger",
+        "klaus_kerner_intelligence_telegram"
+      ]
+    }
+  ],
+  "roleAggregation": {
+    "3_players": [
+      { "roles": ["indy"] },
+      { "roles": ["sophia"] },
+      { "roles": ["marcus"] }
+    ],
+    "2_players": [
+      { "roles": ["indy"] },
+      { "roles": ["sophia", "marcus"] }
+    ],
+    "1_player_solo": [
+      { "roles": ["indy", "sophia", "marcus"] }
+    ]
+  },
+  "nodes": {
+    "barnett_archives": {
+      "id": "barnett_archives",
+      "type": "room",
+      "title": "Barnett College Archives",
+      "visibility": { "type": "common" },
+      "content": {
+        "visuals": [],
+        "narrativeText": "In the dusty archive rooms of Barnett College, a mysterious visitor named Mr. Smith arrives requesting an unusual horned figurine.",
+        "physicalFallback": {
+          "format": "french_fold",
+          "label": "Location Sheet #1: Archives"
+        }
+      },
+      "transitions": [
+        {
+          "targetNodeId": "puzzle_horned_figurine",
+          "condition": "on_solve",
+          "revealType": "provide_clue",
+          "targetRefId": "Clue: Horned Figurine"
+        }
+      ]
+    },
+    "puzzle_horned_figurine": {
+      "id": "puzzle_horned_figurine",
+      "type": "puzzle",
+      "title": "The Horned Figurine & Miniature Key",
+      "visibility": { "type": "role", "roleIds": ["indy"] },
+      "content": {
+        "visuals": [],
+        "narrativeText": "You examine the Horned Figurine [ITM-HORNED-42] with 5 symbols. Identify the 3 common symbols between the figurine and the key to trigger the hidden spring mechanism!",
+        "physicalFallback": {
+          "format": "card",
+          "label": "Card #1: Horned Figurine",
+          "lockSigil": "🜲"
+        }
+      },
+      "puzzle": {
+        "lockSigil": "🜲",
+        "solutionKey": ["▲", "●", "◆"],
+        "hints": [
+          "Examine the 5 symbols printed on the figurine and the 5 on the key.",
+          "Find the exact 3 symbols that appear on BOTH items.",
+          "The 3 common symbols are: ▲, ●, ◆."
+        ],
+        "inputConfig": {
+          "orderMode": "unordered",
+          "allowRepetition": false,
+          "length": 3,
+          "preset": "alchemy",
+          "availableSymbols": [
+            { "id": "tri_up", "glyph": "▲", "name": "Fire" },
+            { "id": "circle", "glyph": "●", "name": "Sol" },
+            { "id": "diamond", "glyph": "◆", "name": "Aether" },
+            { "id": "square", "glyph": "■", "name": "Salt" },
+            { "id": "star", "glyph": "★", "name": "Quintessence" }
+          ]
+        }
+      },
+      "transitions": [
+        {
+          "targetNodeId": "envelope_orichalcum",
+          "condition": "on_solve",
+          "revealType": "open_envelope",
+          "targetRefId": "Envelope #1 (Orichalcum Bead)"
+        }
+      ]
+    },
+    "envelope_orichalcum": {
+      "id": "envelope_orichalcum",
+      "type": "item",
+      "title": "The Orichalcum Bead & Kerner Betrayal",
+      "visibility": { "type": "common" },
+      "content": {
+        "visuals": [],
+        "narrativeText": "Click! The figurine pops open, revealing a tiny red metal bead—Orichalcum! Suddenly, 'Mr. Smith' draws a Luger pistol and identifies himself as Klaus Kerner, an agent of the Third Reich. Kerner snatches the statue and bead, knocking you back into a bookshelf before escaping into the rainy night!",
+        "physicalFallback": {
+          "format": "envelope",
+          "label": "Envelope #1 (Orichalcum Bead)",
+          "sealId": "♈︎ 84"
+        }
+      },
+      "transitions": [
+        {
+          "targetNodeId": "puzzle_theater_route",
+          "condition": "on_solve",
+          "revealType": "provide_clue",
+          "targetRefId": "Nav Clue: New York"
+        }
+      ]
+    },
+    "puzzle_theater_route": {
+      "id": "puzzle_theater_route",
+      "type": "puzzle",
+      "title": "Travel to New York: Sophia Hapgood’s Theater",
+      "visibility": { "type": "role", "roleIds": ["marcus"] },
+      "content": {
+        "visuals": [],
+        "narrativeText": "Marcus Brody inspects Klaus Kerner’s left-behind notebook. A telegram mentions former colleague Sophia Hapgood in New York City! Marcus consults his navigation ledger for New York coordinates (40°N, 74°W). Meanwhile, Indy notes the alleyway route around Biff requires direction arrows [▲, ▶, ▲, ◀].",
+        "physicalFallback": {
+          "format": "card",
+          "label": "Card #2: NY Theater Alley",
+          "lockSigil": "🏹"
+        }
+      },
+      "puzzle": {
+        "lockSigil": "🏹",
+        "solutionKey": ["▲", "▶", "▲", "◀"],
+        "hints": [
+          "Marcus has the New York map, and Indy knows the alley shortcut.",
+          "Follow the fire escape route: Up, Right, Up, Left.",
+          "Sequence: ▲, ▶, ▲, ◀."
+        ],
+        "inputConfig": {
+          "orderMode": "ordered",
+          "allowRepetition": true,
+          "length": 4,
+          "preset": "arrows",
+          "availableSymbols": [
+            { "id": "up", "glyph": "▲", "name": "Up" },
+            { "id": "down", "glyph": "▼", "name": "Down" },
+            { "id": "left", "glyph": "◀", "name": "Left" },
+            { "id": "right", "glyph": "▶", "name": "Right" }
+          ]
+        }
+      },
+      "transitions": [
+        {
+          "targetNodeId": "theater_backstage",
+          "condition": "on_solve",
+          "revealType": "provide_clue",
+          "targetRefId": "Scene: Backstage"
+        }
+      ]
+    },
+    "theater_backstage": {
+      "id": "theater_backstage",
+      "type": "room",
+      "title": "New York Theater Backstage",
+      "visibility": { "type": "common" },
+      "content": {
+        "visuals": [],
+        "narrativeText": "You slip backstage during Sophia’s presentation on Atlantean civilization. A stagehand is guarding the ghost control console. You give him an evening newspaper to distract him, then inspect the Ghost Machine levers.",
+        "physicalFallback": {
+          "format": "french_fold",
+          "label": "Location Sheet #2: Backstage"
+        }
+      },
+      "transitions": [
+        {
+          "targetNodeId": "puzzle_ghost_machine",
+          "condition": "on_solve",
+          "revealType": "provide_clue",
+          "targetRefId": "Puzzle: Ghost Machine"
+        }
+      ]
+    },
+    "puzzle_ghost_machine": {
+      "id": "puzzle_ghost_machine",
+      "type": "puzzle",
+      "title": "The Ghost Machine Levers",
+      "visibility": { "type": "role", "roleIds": ["sophia"] },
+      "content": {
+        "visuals": [],
+        "narrativeText": "Sophia’s private psychic ledger describes the exact electrical frequency to summon the glowing specter of Nur-Ab-Sal across the stage: Push the Left Lever Back (▼), Middle Lever Forward (▲), and Right Lever Back (▼)!",
+        "physicalFallback": {
+          "format": "card",
+          "label": "Card #3: Ghost Machine",
+          "lockSigil": "⚡"
+        }
+      },
+      "puzzle": {
+        "lockSigil": "⚡",
+        "solutionKey": ["▼", "▲", "▼"],
+        "hints": [
+          "Sophia knows the theatrical cue settings.",
+          "Left Back (▼), Center Forward (▲), Right Back (▼).",
+          "Sequence: ▼, ▲, ▼."
+        ],
+        "inputConfig": {
+          "orderMode": "ordered",
+          "allowRepetition": true,
+          "length": 3,
+          "preset": "arrows",
+          "availableSymbols": [
+            { "id": "up", "glyph": "▲", "name": "Up" },
+            { "id": "down", "glyph": "▼", "name": "Down" },
+            { "id": "left", "glyph": "◀", "name": "Left" },
+            { "id": "right", "glyph": "▶", "name": "Right" }
+          ]
+        }
+      },
+      "transitions": [
+        {
+          "targetNodeId": "envelope_ransacked_room",
+          "condition": "on_solve",
+          "revealType": "open_envelope",
+          "targetRefId": "Envelope #2 (Sophia’s Medallion)"
+        }
+      ]
+    },
+    "envelope_ransacked_room": {
+      "id": "envelope_ransacked_room",
+      "type": "room",
+      "title": "Ransacked Dressing Room & The Medallion",
+      "visibility": { "type": "common" },
+      "content": {
+        "visuals": [],
+        "narrativeText": "The glowing ghost causes an uproar on stage, ending the show! Sophia rushes into her dressing room with Indy, only to find it completely ransacked by Kerner! Luckily, Sophia pulls her secret treasure from under her blouse: the authentic Medallion of Nur-Ab-Sal!",
+        "physicalFallback": {
+          "format": "envelope",
+          "label": "Envelope #2 (Sophia’s Medallion)",
+          "sealId": "♎︎ 19"
+        }
+      },
+      "transitions": [
+        {
+          "targetNodeId": "puzzle_expedition_navigation",
+          "condition": "on_solve",
+          "revealType": "provide_clue",
+          "targetRefId": "Expedition Chart"
+        }
+      ]
+    },
+    "puzzle_expedition_navigation": {
+      "id": "puzzle_expedition_navigation",
+      "type": "puzzle",
+      "title": "Expedition Navigation: The Journey to Iceland & Tikal",
+      "visibility": { "type": "role", "roleIds": ["marcus"] },
+      "content": {
+        "visuals": [],
+        "narrativeText": "To locate the lost manuscript, you must travel to remote excavation sites. Marcus holds the maritime chart with coordinates for Dr. Heimdall’s dig in Iceland: [64N, 18W]. Sophia’s medallion glows toward the northern star constellation [N, NE, NW]. Align the compass directions with the expedition coordinates [N, NE, NW] to chart your flight path!",
+        "physicalFallback": {
+          "format": "card",
+          "label": "Card #4: Navigation Chart",
+          "lockSigil": "🧭"
+        }
+      },
+      "puzzle": {
+        "lockSigil": "🧭",
+        "solutionKey": ["N", "NE", "NW"],
+        "hints": [
+          "Marcus holds the coordinates, while Sophia reads the medallion heading.",
+          "Enter the 3 northern compass vectors: N, NE, NW.",
+          "Sequence: N, NE, NW."
+        ],
+        "inputConfig": {
+          "orderMode": "ordered",
+          "allowRepetition": false,
+          "length": 3,
+          "preset": "compass",
+          "availableSymbols": [
+            { "id": "n", "glyph": "N", "name": "North" },
+            { "id": "ne", "glyph": "NE", "name": "North-East" },
+            { "id": "nw", "glyph": "NW", "name": "North-West" }
+          ]
+        }
+      },
+      "transitions": [
+        {
+          "targetNodeId": "iceland_and_tikal",
+          "condition": "on_solve",
+          "revealType": "open_envelope",
+          "targetRefId": "Envelope #3 (Expeditions)"
+        }
+      ]
+    },
+    "iceland_and_tikal": {
+      "id": "iceland_and_tikal",
+      "type": "room",
+      "title": "Expedition Discoveries: The Frozen Eel & The Tikal Pyramid",
+      "visibility": { "type": "common" },
+      "content": {
+        "visuals": [],
+        "narrativeText": "In Iceland, you find Dr. Heimdall frozen in a glacier. You insert an orichalcum bead into a bronze eel statue to melt the ice, retrieving an ancient Eel Figurine! In Guatemala, you brave the Mayan jungle at Tikal with Dr. Charles Sternhart. Inside the pyramid, a spiral carving and parrot squawk reveal the true title of Plato’s lost book: 'HERMOCRATES'. In the Azores, Sophia charms Felipe Costa into revealing that the Hermocrates manuscript was actually bequeathed to the collection at Barnett College!",
+        "physicalFallback": {
+          "format": "envelope",
+          "label": "Envelope #3 (Expeditions)",
+          "sealId": "♐︎ 71"
+        }
+      },
+      "transitions": [
+        {
+          "targetNodeId": "puzzle_furnace_wax_cat",
+          "condition": "on_solve",
+          "revealType": "provide_clue",
+          "targetRefId": "Barnett College Boiler"
+        }
+      ]
+    },
+    "puzzle_furnace_wax_cat": {
+      "id": "puzzle_furnace_wax_cat",
+      "type": "puzzle",
+      "title": "The Wax Cat Figurine & Boiler Furnace",
+      "visibility": { "type": "role", "roleIds": ["indy"] },
+      "content": {
+        "visuals": [],
+        "narrativeText": "Back at Barnett College, Indy uses a jar of mayonnaise to tip over a totem pole as a ladder into the high sculpture archives. You discover a lightweight Wax Cat Figurine [ITM-WAXCAT-19] with 5 hieroglyphs. Down in the boiler room, the roaring coal furnace door [ITM-BOILER-88] is inscribed with 5 hieroglyphs. Identify the 3 common hieroglyphs between the wax cat and the furnace to melt the wax and extract the preserved manuscript inside!",
+        "physicalFallback": {
+          "format": "card",
+          "label": "Card #5: Wax Cat & Furnace",
+          "lockSigil": "🔥"
+        }
+      },
+      "puzzle": {
+        "lockSigil": "🔥",
+        "solutionKey": ["𓁹", "𓆣", "𓋹"],
+        "hints": [
+          "Compare the 5 hieroglyphs on the wax cat with the 5 on the furnace door.",
+          "Find the 3 matching hieroglyphs common to both elements.",
+          "The 3 common hieroglyphs are: 𓁹, 𓆣, 𓋹."
+        ],
+        "inputConfig": {
+          "orderMode": "unordered",
+          "allowRepetition": false,
+          "length": 3,
+          "preset": "egyptian",
+          "availableSymbols": [
+            { "id": "eye", "glyph": "𓁹", "name": "Eye of Horus" },
+            { "id": "scarab", "glyph": "𓆣", "name": "Scarab Beetle" },
+            { "id": "ankh", "glyph": "𓋹", "name": "Ankh of Life" },
+            { "id": "bird", "glyph": "𓅓", "name": "Falcon" },
+            { "id": "reed", "glyph": "𓇋", "name": "Reed" }
+          ]
+        }
+      },
+      "transitions": [
+        {
+          "targetNodeId": "envelope_lost_dialogue",
+          "condition": "on_solve",
+          "revealType": "open_envelope",
+          "targetRefId": "Envelope #4 (The Lost Dialogue of Plato)"
+        }
+      ]
+    },
+    "envelope_lost_dialogue": {
+      "id": "envelope_lost_dialogue",
+      "type": "item",
+      "title": "The Lost Dialogue of Plato (Hermocrates)",
+      "visibility": { "type": "common" },
+      "content": {
+        "visuals": [],
+        "narrativeText": "The wax melts away in the furnace flames, revealing a heat-proof lead canister! Inside is Plato’s long-lost manuscript: HERMOCRATES! Indy and Sophia read the translation: Plato reveals his 'tenfold error'—the gates of the Kingdom of Atlantis lie not 9,000 leagues away, but 900! With the Lost Dialogue in hand, you are ready to embark on your journey to find the Sunken City! Choose your path: The Team Path with Sophia, the Wits Path, or the Fists Path!",
+        "physicalFallback": {
+          "format": "envelope",
+          "label": "Envelope #4 (The Lost Dialogue of Plato)",
+          "sealId": "♈︎ 99"
+        }
+      },
+      "transitions": []
+    }
+  },
+  "initialState": {
+    "unlockedNodeIds": ["barnett_archives"],
+    "solvedPuzzleIds": [],
+    "activeDossiers": [
+      "indy_field_journal",
+      "nur_ab_sal_telepathy_ledger",
+      "barnett_college_archives_index"
+    ],
+    "inventory": []
+  },
+  "seedConfig": {
+    "defaultSeed": "ATLANTIS-1939"
+  }
+}

@@ -14,7 +14,7 @@ export * from './protocol.js';
 export class GameServer {
   protected wss: WebSocketServer | null = null;
   protected rooms = new Map<string, Room>();
-  protected clientRoomMap = new WeakMap<WebSocket, { roomId: string; playerId: string }>();
+  protected clientRoomMap = new Map<WebSocket, { roomId: string; playerId: string }>();
 
   getRoom(roomId: string): Room {
     let room = this.rooms.get(roomId);
@@ -23,6 +23,27 @@ export class GameServer {
       this.rooms.set(roomId, room);
     }
     return room;
+  }
+
+  getRooms(): Map<string, Room> {
+    return this.rooms;
+  }
+
+  terminateRoom(roomId: string): boolean {
+    const room = this.rooms.get(roomId);
+    if (room) {
+      for (const [ws, info] of this.clientRoomMap.entries()) {
+        if (info.roomId === roomId) {
+          try {
+            ws.close(1000, 'Room terminated by admin');
+          } catch {}
+          this.clientRoomMap.delete(ws);
+        }
+      }
+      this.rooms.delete(roomId);
+      return true;
+    }
+    return false;
   }
 
   start(port = 0, server?: Server): Promise<number> {
@@ -160,6 +181,9 @@ export class GameServer {
         break;
       case 'game_action':
         room.handleAction(info.playerId, payload as GameActionPayload);
+        break;
+      case 'assign_seat':
+        room.assignSeat(info.playerId, payload as { targetPlayerId: string; seatId: string | null; seatName?: string | null; roleIds?: string[] });
         break;
       case 'leave_room':
         room.leave(info.playerId);

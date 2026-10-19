@@ -63,6 +63,10 @@ import type { NodeType } from '@escape-system/contracts';
           >
             📄 Print & Play Preview
           </button>
+          <label class="btn-upload-json">
+            📂 Load JSON
+            <input type="file" accept=".json" (change)="onUploadScenarioJson($event)" style="display:none;" />
+          </label>
         </nav>
       </header>
 
@@ -76,6 +80,7 @@ import type { NodeType } from '@escape-system/contracts';
                   <span class="controls-label">Add Node:</span>
                   <button class="btn-add room" (click)="addNode('room')">+ Room</button>
                   <button class="btn-add puzzle" (click)="addNode('puzzle')">+ Puzzle</button>
+                  <button class="btn-add combine" (click)="addNode('combine')">🔀 + Combine</button>
                   <button class="btn-add item" (click)="addNode('item')">+ Item</button>
                   <button class="btn-add machine" (click)="addNode('machine')">+ Machine</button>
                   <button class="btn-add dossier" (click)="addNode('dossier')">+ Dossier</button>
@@ -170,9 +175,23 @@ import type { NodeType } from '@escape-system/contracts';
     }
     .btn-add.room { background: #1d3557; }
     .btn-add.puzzle { background: #7209b7; }
+    .btn-add.combine { background: #0077b6; }
     .btn-add.item { background: #2a9d8f; }
     .btn-add.machine { background: #f4a261; }
     .btn-add.dossier { background: #3a86ff; }
+    .btn-upload-json {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      margin-left: 8px;
+    }
+    .btn-upload-json:hover { background: rgba(255, 255, 255, 0.35); }
   `]
 })
 export class AppComponent {
@@ -184,6 +203,7 @@ export class AppComponent {
     const defaultTitles: Record<NodeType, string> = {
       room: 'New Chamber',
       puzzle: 'New Lock Puzzle',
+      combine: 'Item Combine (Intersection)',
       item: 'Ancient Artifact',
       machine: 'Terminal Widget',
       dossier: 'Confidential Dossier',
@@ -192,9 +212,27 @@ export class AppComponent {
 
     this.graphService.addNode({
       type,
-      title: defaultTitles[type],
+      title: defaultTitles[type] ?? 'New Node',
       x: 200 + Math.floor(Math.random() * 200),
       y: 150 + Math.floor(Math.random() * 200)
     });
+  }
+
+  onUploadScenarioJson(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const json = JSON.parse(e.target?.result as string);
+        this.graphService.loadManifest(json);
+        alert(`Scenario "${json.title}" loaded successfully into Studio!`);
+      } catch (err) {
+        alert('Invalid JSON scenario file: ' + (err as Error).message);
+      }
+    };
+    reader.readAsText(file);
   }
 }

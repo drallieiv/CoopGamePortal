@@ -7,8 +7,13 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DomSanitizer, type SafeHtml } from '@angular/platform-browser';
 import { GraphService } from '../../services/graph.service.js';
-import { PnpCompiler, type PnpOutput } from '@escape-system/pnp-compiler';
+import { PnpCompiler, type PnpOutput, type PnpPage } from '@escape-system/pnp-compiler';
+
+export interface DisplayPage extends PnpPage {
+  safeSvg: SafeHtml;
+}
 
 @Component({
   selector: 'app-pnp-preview',
@@ -67,7 +72,7 @@ import { PnpCompiler, type PnpOutput } from '@escape-system/pnp-compiler';
 
         <!-- Sheets Grid Preview -->
         <div class="sheets-gallery">
-          @for (page of out.allPages; track page.pageId) {
+          @for (page of displayPages(); track page.pageId) {
             <div class="sheet-container">
               <div class="sheet-meta">
                 <span class="sheet-category" [class]="page.category">{{ page.category | uppercase }}</span>
@@ -77,7 +82,7 @@ import { PnpCompiler, type PnpOutput } from '@escape-system/pnp-compiler';
                 }
               </div>
 
-              <div class="sheet-svg-frame" [innerHTML]="page.svg"></div>
+              <div class="sheet-svg-frame" [innerHTML]="page.safeSvg"></div>
             </div>
           }
         </div>
@@ -88,43 +93,47 @@ import { PnpCompiler, type PnpOutput } from '@escape-system/pnp-compiler';
     .pnp-preview-root {
       padding: 24px;
       font-family: system-ui, -apple-system, sans-serif;
-      color: #212529;
+      overflow-y: auto;
+      height: 100%;
     }
     .preview-toolbar {
       display: flex;
       justify-content: space-between;
       align-items: center;
       background: #ffffff;
+      padding: 16px 20px;
       border: 1px solid #dee2e6;
       border-radius: 8px;
-      padding: 16px 20px;
       margin-bottom: 20px;
     }
-    .options-row { display: flex; gap: 20px; align-items: center; }
-    .opt-group { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; }
-    .opt-group.checkbox { flex-direction: row; align-items: center; }
-    select { padding: 6px 10px; border-radius: 4px; border: 1px solid #ced4da; font-size: 13px; }
+    .options-row { display: flex; gap: 24px; align-items: center; }
+    .opt-group { display: flex; flex-direction: column; gap: 4px; }
+    .opt-group.checkbox { flex-direction: row; align-items: center; margin-top: 14px; }
+    label { font-size: 12px; font-weight: 600; color: #495057; }
+    select { padding: 6px 12px; border: 1px solid #ced4da; border-radius: 4px; font-size: 13px; }
     .btn-download {
-      padding: 10px 18px;
       background: #1d3557;
       color: #fff;
-      font-weight: bold;
       border: none;
-      border-radius: 6px;
+      padding: 8px 16px;
+      border-radius: 4px;
+      font-weight: bold;
+      font-size: 13px;
       cursor: pointer;
     }
     .summary-banner {
       display: flex;
       gap: 24px;
-      background: #e9ecef;
+      background: #e0f2fe;
+      color: #0369a1;
       padding: 12px 20px;
       border-radius: 6px;
-      font-size: 14px;
+      font-size: 13px;
       margin-bottom: 24px;
     }
     .sheets-gallery {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(440px, 1fr));
       gap: 24px;
     }
     .sheet-container {
@@ -157,11 +166,12 @@ import { PnpCompiler, type PnpOutput } from '@escape-system/pnp-compiler';
       max-height: 480px;
       overflow: auto;
     }
-    .sheet-svg-frame svg { max-width: 100%; height: auto; }
+    .sheet-svg-frame svg { width: 100%; max-width: 440px; height: auto; }
   `]
 })
 export class PnpPreviewComponent {
   protected readonly graphService = inject(GraphService);
+  protected readonly sanitizer = inject(DomSanitizer);
 
   readonly playerCount = signal(2);
   readonly foldFormat = signal<'french-fold' | 'double-parallel-fold'>('french-fold');
@@ -174,6 +184,14 @@ export class PnpPreviewComponent {
       foldFormat: this.foldFormat(),
       includeVerificationGrid: this.includeGrid()
     });
+  });
+
+  readonly displayPages = computed<DisplayPage[]>(() => {
+    const out = this.pnpOutput();
+    return out.allPages.map(page => ({
+      ...page,
+      safeSvg: this.sanitizer.bypassSecurityTrustHtml(page.svg)
+    }));
   });
 
   downloadManifestJson(): void {

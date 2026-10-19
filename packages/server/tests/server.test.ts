@@ -137,7 +137,9 @@ describe('GameServer & Room Real-Time Sync', () => {
     ]);
 
     // B sets focus to 'schematic-1'
+    const focusPromise = waitForMessage(wsA, 'presence_sync');
     wsB.send(createMessage('focus_element', { elementId: 'schematic-1' }));
+    await focusPromise;
 
     // A sends cursor scoped to 'schematic-1' -> B should receive it
     const cursorPromise = waitForMessage<CursorMovePayload>(wsB, 'cursor_move');

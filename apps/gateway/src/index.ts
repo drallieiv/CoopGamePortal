@@ -3,16 +3,19 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { GameServer } from '@escape-system/server';
-import { ScenarioCatalog } from '@escape-system/hub';
+import { ScenarioCatalog, SessionStore, type ActiveGameSession } from '@escape-system/hub';
 import type { ScenarioManifest } from '@escape-system/contracts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'atlantis-admin';
+
 export class PortalGateway {
   protected server: http.Server | null = null;
   readonly gameServer: GameServer;
   readonly catalog: ScenarioCatalog;
+  readonly sessionStore: SessionStore;
   readonly clientDistDir: string;
   readonly studioDistDir: string;
 
@@ -20,9 +23,11 @@ export class PortalGateway {
     clientDistDir?: string;
     studioDistDir?: string;
     catalog?: ScenarioCatalog;
+    sessionStore?: SessionStore;
   }) {
     this.gameServer = new GameServer();
     this.catalog = options?.catalog ?? new ScenarioCatalog();
+    this.sessionStore = options?.sessionStore ?? new SessionStore();
 
     // Default paths resolve relative to monorepo root
     this.clientDistDir = options?.clientDistDir ?? path.resolve(__dirname, '../../client/dist/public');
@@ -90,16 +95,17 @@ export class PortalGateway {
         services: {
           gateway: 'online',
           hub: 'online',
-          websocket: 'online'
+          websocket: 'online',
+          sessions: 'online'
         },
         version: '0.1.0'
       });
       return;
     }
 
-    // 2. Hub REST API Routes (/api/scenarios)
-    if (parsedPath.startsWith('/api/scenarios')) {
-      await this.handleHubApi(req, res, parsedPath);
+    // 2. Unified REST API Routes (/api/*)
+    if (parsedPath.startsWith('/api/')) {
+      await this.handleApi(req, res, parsedPath);
       return;
     }
 
@@ -121,7 +127,11 @@ export class PortalGateway {
     this.serveStatic(res, this.clientDistDir, clientPath);
   }
 
-  protected async handleHubApi(req: IncomingMessage, res: ServerResponse, parsedPath: string): Promise<void> {
+  protected async handleApi(req: IncomingMessage, res: ServerResponse, parsedPath: string): Promise<void> {
+    const rawUrl = req.url ?? '/';
+    const parsedUrl = new URL(rawUrl, 'http://localhost');
+
+    // === SCENARIOS API ===
     if (req.method === 'GET' && parsedPath === '/api/scenarios') {
       const list = this.catalog.list();
       this.sendJson(res, 200, { scenarios: list, count: list.length });
@@ -155,7 +165,121 @@ export class PortalGateway {
       return;
     }
 
-    this.sendJson(res, 404, { error: 'Not found', path: parsedPath });
+    // === SESSIONS API ===
+    if (req.method === 'GET' && parsedPath === '/api/sessions') {
+      const list = this.sessionStore.listSessions();
+      this.sendJson(res, 200, { sessions: list, count: list.length });
+      return;
+    }
+
+    if (req.method === 'GET' && parsedPath.startsWith('/api/sessions/')) {
+      const roomId = parsedPath.slice('/api/sessions/'.length);
+      const session = this.sessionStore.getSession(roomId);
+      if (!session) {
+        this.sendJson(res, 404, { error: 'Session not found', roomId });
+        return;
+      }
+      const secret = parsedUrl.searchParams.get('secret');
+      const isAuthorized = secret && secret === session.hostSecret;
+      this.sendJson(res, 200, {
+        ...session,
+        isHost: Boolean(isAuthorized)
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && parsedPath === '/api/sessions') {
+      try {
+        const bodyText = await this.readBody(req);
+        const body = JSON.parse(bodyText) as ActiveGameSession;
+        if (!body.roomId || !body.scenarioId) {
+          this.sendJson(res, 400, { error: 'roomId and scenarioId required' });
+          return;
+        }
+        const created = this.sessionStore.createSession(body);
+        this.sendJson(res, 201, { success: true, session: created });
+      } catch (err) {
+        this.sendJson(res, 400, { error: (err as Error).message });
+      }
+      return;
+    }
+
+    // === SUPERADMIN API ===
+    if (req.method === 'POST' && parsedPath === '/api/admin/login') {
+      try {
+        const bodyText = await this.readBody(req);
+        const body = JSON.parse(bodyText) as { password?: string };
+        if (body.password === ADMIN_PASSWORD) {
+          this.sendJson(res, 200, { success: true, message: 'Superadmin authenticated' });
+        } else {
+          this.sendJson(res, 401, { error: 'Invalid superadmin password' });
+        }
+      } catch (err) {
+        this.sendJson(res, 400, { error: (err as Error).message });
+      }
+      return;
+    }
+
+    if (req.method === 'GET' && parsedPath === '/api/admin/rooms') {
+      const authHeader = req.headers.authorization;
+      if (authHeader !== `Bearer ${ADMIN_PASSWORD}`) {
+        this.sendJson(res, 401, { error: 'Unauthorized: Admin password required' });
+        return;
+      }
+
+      // Collect rooms from sessionStore and active WebSocket server
+      const sessions = this.sessionStore.listSessions();
+      const wsRooms = this.gameServer.getRooms();
+
+      const rooms = sessions.map(s => {
+        const wsRoom = wsRooms.get(s.roomId);
+        const members = wsRoom ? wsRoom.getMembers() : [];
+        return {
+          roomId: s.roomId,
+          scenarioId: s.scenarioId,
+          scenarioTitle: s.scenarioTitle,
+          seed: s.seed,
+          playMode: s.playMode,
+          playerCount: s.playerCount,
+          createdAt: s.createdAt,
+          hostSecret: s.hostSecret,
+          activeSocketsCount: members.length,
+          members: members.map(m => ({
+            playerId: m.playerId,
+            playerName: m.playerName,
+            seatId: m.seatId,
+            seatName: m.seatName,
+            isHost: m.isHost,
+            focusedElementId: m.focusedElementId
+          }))
+        };
+      });
+
+      this.sendJson(res, 200, { rooms, totalCount: rooms.length });
+      return;
+    }
+
+    if (req.method === 'POST' && parsedPath.startsWith('/api/admin/rooms/') && parsedPath.endsWith('/terminate')) {
+      const authHeader = req.headers.authorization;
+      if (authHeader !== `Bearer ${ADMIN_PASSWORD}`) {
+        this.sendJson(res, 401, { error: 'Unauthorized: Admin password required' });
+        return;
+      }
+
+      const match = parsedPath.match(/\/api\/admin\/rooms\/([^/]+)\/terminate/);
+      const roomId = match?.[1];
+      if (!roomId) {
+        this.sendJson(res, 400, { error: 'Missing roomId' });
+        return;
+      }
+
+      this.gameServer.terminateRoom(roomId);
+      this.sessionStore.deleteSession(roomId);
+      this.sendJson(res, 200, { success: true, message: `Room ${roomId} terminated` });
+      return;
+    }
+
+    this.sendJson(res, 404, { error: 'API route not found', path: parsedPath });
   }
 
   protected serveStatic(res: ServerResponse, baseDir: string, filePath: string): void {

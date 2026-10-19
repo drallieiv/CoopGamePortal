@@ -11,7 +11,8 @@
     "test": "node --import tsx --test tests/**/*.test.ts"
   },
   "dependencies": {
-    "@escape-system/contracts": "*"
+    "@escape-system/contracts": "*",
+    "@escape-system/pnp-compiler": "*"
   },
   "devDependencies": {
     "@types/node": "^22.13.9",
