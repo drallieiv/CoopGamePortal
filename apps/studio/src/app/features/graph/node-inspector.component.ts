@@ -5,7 +5,9 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DomSanitizer, type SafeHtml } from '@angular/platform-browser';
 import { GraphService, type StudioNode } from '../../services/graph.service.js';
+import { AssetService } from '../../services/asset.service.js';
 import {
   type RevealType,
   type SymbolSetPreset,
@@ -21,7 +23,7 @@ import {
     <div class="inspector-panel">
       @if (graphService.selectedNode(); as node) {
         <div class="inspector-header">
-          <h3>Node Inspector</h3>
+          <h3>Node Parameters Pane</h3>
           <button class="btn-delete" (click)="graphService.deleteNode(node.id)">Delete Node</button>
         </div>
 
@@ -47,6 +49,43 @@ import {
             <option value="machine">Interactive Machine / Widget</option>
             <option value="dossier">Confidential Role Dossier</option>
           </select>
+        </div>
+
+        <!-- Interactive Zone Assignment -->
+        <div class="form-group">
+          <label>Interactive Tabletop Zone:</label>
+          <select
+            [ngModel]="node.zoneId ?? 'common_table'"
+            (ngModelChange)="onUpdate(node.id, { zoneId: $event })"
+          >
+            <option value="common_table">🌐 Common Table (Shared Interactive Area)</option>
+            <option value="private_sanctum">🔒 Private Sanctum (Role-Restricted)</option>
+            <option value="zone_archives">🏛️ Archives Table Zone</option>
+            <option value="zone_altar">🗿 Altar / Stele Zone</option>
+            <option value="zone_furnace">🔥 Boiler / Furnace Zone</option>
+            <option value="zone_map">🧭 Navigation Chart Zone</option>
+          </select>
+        </div>
+
+        <!-- Graphical Asset Picker & Live Thumbnail -->
+        <div class="form-group asset-picker-box">
+          <label>Attached Graphical Asset:</label>
+          <select
+            [ngModel]="node.assetId"
+            (ngModelChange)="onSelectAsset(node.id, $event)"
+          >
+            <option [value]="undefined">-- No Asset Assigned (Default Placeholder) --</option>
+            @for (asset of assetService.assets(); track asset.id) {
+              <option [value]="asset.id">{{ asset.name }} ({{ asset.stage | uppercase }})</option>
+            }
+          </select>
+
+          @if (selectedAssetSvg(node); as safeSvg) {
+            <div class="asset-preview-thumb">
+              <span class="thumb-label">Live Visual Preview:</span>
+              <div class="thumb-frame" [innerHTML]="safeSvg"></div>
+            </div>
+          }
         </div>
 
         @if (node.type === 'combine') {
@@ -250,15 +289,20 @@ import {
 
               <div class="form-group" style="margin-top: 10px;">
                 <label>Connected Target Node:</label>
-                <select
-                  [ngModel]="node.targetNodeId"
-                  (ngModelChange)="onTargetChange(node.id, $event)"
-                >
-                  <option [value]="undefined">-- None (Terminal) --</option>
-                  @for (other of otherNodes(node.id); track other.id) {
-                    <option [value]="other.id">{{ other.type | uppercase }}: {{ other.title }}</option>
+                <div class="link-target-row">
+                  <select
+                    [ngModel]="node.targetNodeId"
+                    (ngModelChange)="onTargetChange(node.id, $event)"
+                  >
+                    <option [value]="undefined">-- None (Terminal) --</option>
+                    @for (other of otherNodes(node.id); track other.id) {
+                      <option [value]="other.id">{{ other.type | uppercase }}: {{ other.title }}</option>
+                    }
+                  </select>
+                  @if (node.targetNodeId) {
+                    <button class="btn-disconnect" (click)="onTargetChange(node.id, undefined)">✕</button>
                   }
-                </select>
+                </div>
               </div>
 
               @if (node.revealType === 'open_envelope') {
@@ -284,7 +328,7 @@ import {
   `,
   styles: [`
     .inspector-panel {
-      width: 340px;
+      width: 360px;
       background: #ffffff;
       border-left: 1px solid #dee2e6;
       padding: 20px;
@@ -322,19 +366,41 @@ import {
       border-radius: 4px;
       font-size: 13px;
     }
+    .asset-picker-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      padding: 10px;
+      border-radius: 6px;
+    }
+    .asset-preview-thumb { margin-top: 8px; }
+    .thumb-label { font-size: 11px; font-weight: bold; color: #64748b; display: block; margin-bottom: 4px; }
+    .thumb-frame {
+      max-height: 120px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #ffffff;
+      border: 1px dashed #cbd5e1;
+      border-radius: 4px;
+      padding: 8px;
+      overflow: hidden;
+    }
+    .thumb-frame svg { max-width: 100%; max-height: 100px; }
+
     .puzzle-fields {
       margin-top: 16px;
       border-top: 2px solid #e9ecef;
       padding-top: 12px;
     }
     .puzzle-fields h4 { margin: 0 0 10px 0; font-size: 14px; color: #7209b7; }
-    .symbol-config-box, .reward-box {
+    .combine-config-box, .symbol-config-box, .reward-box {
       background: #f8f9fa;
       border: 1px solid #e2e8f0;
       border-radius: 6px;
       padding: 12px;
       margin-top: 12px;
     }
+    .combine-config-box h4 { margin: 0 0 8px 0; font-size: 13px; color: #0077b6; }
     .symbol-config-box h4, .reward-box h4 { margin: 0 0 8px 0; font-size: 13px; color: #212529; }
     .radio-row { display: flex; flex-direction: column; gap: 6px; font-size: 12px; margin-top: 4px; }
     .radio-option { margin-bottom: 6px; font-size: 12px; }
@@ -355,11 +421,16 @@ import {
       transition: all 0.15s;
     }
     .btn-sym:hover { background: #e0f2fe; border-color: #0369a1; }
+    .link-target-row { display: flex; gap: 6px; }
+    .link-target-row select { flex: 1; }
+    .btn-disconnect { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; border-radius: 4px; font-weight: bold; cursor: pointer; padding: 0 8px; }
     .empty-selection { color: #6c757d; font-size: 13px; padding-top: 40px; text-align: center; }
   `]
 })
 export class NodeInspectorComponent {
   protected readonly graphService = inject(GraphService);
+  protected readonly assetService = inject(AssetService);
+  protected readonly sanitizer = inject(DomSanitizer);
 
   otherNodes(currentId: string): StudioNode[] {
     return this.graphService.nodes().filter(n => n.id !== currentId);
@@ -371,6 +442,25 @@ export class NodeInspectorComponent {
       return node.inputConfig?.availableSymbols ?? [];
     }
     return SYMBOL_PRESETS[preset] ?? SYMBOL_PRESETS.alchemy;
+  }
+
+  selectedAssetSvg(node: StudioNode): SafeHtml | null {
+    if (!node.assetId) return null;
+    const asset = this.assetService.assets().find(a => a.id === node.assetId);
+    if (!asset?.svgContent) return null;
+    return this.sanitizer.bypassSecurityTrustHtml(asset.svgContent);
+  }
+
+  onSelectAsset(nodeId: string, assetId?: string): void {
+    if (!assetId) {
+      this.graphService.updateNode(nodeId, { assetId: undefined, assetSvg: undefined });
+      return;
+    }
+    const asset = this.assetService.assets().find(a => a.id === assetId);
+    this.graphService.updateNode(nodeId, {
+      assetId,
+      assetSvg: asset?.svgContent
+    });
   }
 
   formatKey(key?: string[]): string {

@@ -1,14 +1,15 @@
 import {
   Component,
   ChangeDetectionStrategy,
-  inject,
-  signal
+  signal,
+  inject
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { GraphService } from './services/graph.service.js';
 import { NodeCanvasComponent } from './features/graph/node-canvas.component.js';
 import { NodeInspectorComponent } from './features/graph/node-inspector.component.js';
 import { AssetManagerComponent } from './features/assets/asset-manager.component.js';
+import { RolesEditorComponent } from './features/roles/roles-editor.component.js';
 import { PnpPreviewComponent } from './features/preview/pnp-preview.component.js';
 import { ProceduralPreviewComponent } from './features/generators/procedural-preview.component.js';
 import type { NodeType } from '@escape-system/contracts';
@@ -20,6 +21,7 @@ import type { NodeType } from '@escape-system/contracts';
     NodeCanvasComponent,
     NodeInspectorComponent,
     AssetManagerComponent,
+    RolesEditorComponent,
     PnpPreviewComponent,
     ProceduralPreviewComponent
   ],
@@ -44,10 +46,17 @@ import type { NodeType } from '@escape-system/contracts';
           </button>
           <button
             class="tab-btn"
+            [class.active]="activeTab() === 'roles'"
+            (click)="activeTab.set('roles')"
+          >
+            👥 Player Roles
+          </button>
+          <button
+            class="tab-btn"
             [class.active]="activeTab() === 'assets'"
             (click)="activeTab.set('assets')"
           >
-            🎨 Figma Asset Manager
+            🎨 Vector Asset Manager
           </button>
           <button
             class="tab-btn"
@@ -89,6 +98,9 @@ import type { NodeType } from '@escape-system/contracts';
               </div>
               <app-node-inspector />
             </div>
+          }
+          @case ('roles') {
+            <app-roles-editor />
           }
           @case ('assets') {
             <app-asset-manager />
@@ -138,37 +150,47 @@ import type { NodeType } from '@escape-system/contracts';
       border-radius: 6px;
       font-size: 13px;
       cursor: pointer;
-      font-weight: 500;
-      transition: all 0.2s;
+      transition: background 0.15s;
+    }
+    .tab-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
     }
     .tab-btn.active {
       background: #e76f51;
       border-color: #e76f51;
       font-weight: bold;
     }
-    .studio-workspace { flex: 1; overflow: hidden; display: flex; }
-    .graph-layout { display: flex; width: 100%; height: 100%; }
-    .canvas-wrapper { flex: 1; display: flex; flex-direction: column; position: relative; }
+    .studio-workspace {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      background: #f1faee;
+    }
+    .graph-layout {
+      display: flex;
+      width: 100%;
+      height: 100%;
+    }
+    .canvas-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
     .canvas-controls {
-      position: absolute;
-      top: 16px;
-      left: 16px;
-      z-index: 100;
       display: flex;
       align-items: center;
       gap: 8px;
+      padding: 8px 16px;
       background: #ffffff;
-      padding: 8px 12px;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      border: 1px solid #ced4da;
+      border-bottom: 1px solid #dee2e6;
     }
     .controls-label { font-size: 12px; font-weight: bold; color: #495057; }
     .btn-add {
       border: none;
       padding: 4px 10px;
       border-radius: 4px;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: bold;
       color: #fff;
       cursor: pointer;
@@ -197,7 +219,7 @@ import type { NodeType } from '@escape-system/contracts';
 export class AppComponent {
   protected readonly graphService = inject(GraphService);
 
-  readonly activeTab = signal<'graph' | 'assets' | 'pnp' | 'generators'>('graph');
+  readonly activeTab = signal<'graph' | 'assets' | 'roles' | 'generators' | 'pnp'>('graph');
 
   addNode(type: NodeType): void {
     const defaultTitles: Record<NodeType, string> = {
