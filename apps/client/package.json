@@ -14,6 +14,7 @@
     "@angular/forms": "^22.2.2",
     "@angular/platform-browser": "^22.2.2",
     "@escape-system/contracts": "*",
+    "@escape-system/pnp-compiler": "*",
     "rxjs": "^7.8.2"
   },
   "devDependencies": {

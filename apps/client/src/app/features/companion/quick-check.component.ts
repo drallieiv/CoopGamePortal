@@ -2,6 +2,7 @@ import {
   Component,
   ChangeDetectionStrategy,
   input,
+  output,
   signal,
   computed
 } from '@angular/core';
@@ -16,6 +17,7 @@ import { SigilResonanceMatrix, VerificationResult } from '@escape-system/contrac
   template: `
     <div class="quick-check-card">
       <div class="header">
+        <button class="btn-back" (click)="exit.emit()">← Lobby</button>
         <h2>{{ scenarioTitle() }}</h2>
         <span class="seed-badge">SEED: {{ seed() }}</span>
       </div>

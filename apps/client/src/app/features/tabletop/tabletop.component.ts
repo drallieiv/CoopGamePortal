@@ -3,7 +3,8 @@ import {
   ChangeDetectionStrategy,
   inject,
   signal,
-  input
+  input,
+  output
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TransportService } from '../../services/transport.service.js';
@@ -19,6 +20,7 @@ import type { CursorMovePayload } from '@escape-system/contracts';
       <!-- Top Navigation & Presence Bar -->
       <header class="top-bar">
         <div class="room-info">
+          <button class="btn-leave" (click)="onLeave()">← Leave</button>
           <h2>Room: {{ roomId() }}</h2>
           <span class="status-indicator" [class.online]="transport.statusSignal() === 'connected'">
             {{ transport.statusSignal() }}
@@ -199,6 +201,17 @@ import type { CursorMovePayload } from '@escape-system/contracts';
     }
     .btn-focus { background: #e9ecef; color: #212529; }
     .btn-action { background: #2a9d8f; color: #fff; font-weight: bold; }
+    .btn-leave {
+      padding: 4px 10px;
+      background: #e9ecef;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #495057;
+      cursor: pointer;
+      margin-right: 8px;
+    }
     .dossier-card {
       background: #fffdfa;
       border: 1px solid #f4a261;
@@ -214,9 +227,17 @@ export class TabletopComponent {
 
   readonly roomId = input<string>('TOMB-ROOM-01');
   readonly localPlayerId = input<string>('player-alice');
+  readonly playerName = input<string>('Alice');
   readonly assignedRole = input<string>('Cartographer');
 
+  readonly leaveRoom = output<void>();
+
   readonly focusedElementId = signal<string | undefined>('antechamber');
+
+  onLeave(): void {
+    this.transport.disconnect();
+    this.leaveRoom.emit();
+  }
 
   setFocus(elementId: string): void {
     this.focusedElementId.set(elementId);
