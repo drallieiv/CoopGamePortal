@@ -10,8 +10,10 @@
   "type": "module",
   "scripts": {
     "start": "node apps/gateway/dist/index.js",
-    "build": "npm run build --workspaces --if-present && npm run build:web",
+    "build:packages": "npm run build --workspace=@escape-system/contracts && npm run build --workspace=@escape-system/generators && npm run build --workspace=@escape-system/pnp-compiler && npm run build --workspace=@escape-system/server",
+    "build:apps": "npm run build --workspace=@escape-system/hub && npm run build --workspace=@escape-system/client && npm run build --workspace=@escape-system/studio && npm run build --workspace=@escape-system/gateway",
     "build:web": "node scripts/build-web.js",
+    "build": "npm run build:packages && npm run build:apps && npm run build:web",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present"
   },
