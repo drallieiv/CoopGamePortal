@@ -6,7 +6,12 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { GraphService, type StudioNode } from '../../services/graph.service.js';
-import type { RevealType } from '@escape-system/contracts';
+import {
+  type RevealType,
+  type SymbolSetPreset,
+  type SymbolItem,
+  SYMBOL_PRESETS
+} from '@escape-system/contracts';
 
 @Component({
   selector: 'app-node-inspector',
@@ -78,6 +83,81 @@ import type { RevealType } from '@escape-system/contracts';
               </div>
             </div>
 
+            <!-- Symbol Set & Keypad Configuration -->
+            <div class="symbol-config-box">
+              <h4>Companion Keypad & Symbol Set</h4>
+
+              <div class="form-group">
+                <label>Symbol Set Preset:</label>
+                <select
+                  [ngModel]="node.inputConfig?.preset ?? 'alchemy'"
+                  (ngModelChange)="onPresetChange(node.id, $event)"
+                >
+                  <option value="arrows">Directional Arrows (▲, ▼, ◀, ▶)</option>
+                  <option value="compass">Compass Directions (N, NE, E, SE, S, SW, W, NW)</option>
+                  <option value="alchemy">Alchemical & Geometric (▲, ●, ◆, ■, ★, ⬡)</option>
+                  <option value="egyptian">Egyptian Hieroglyphs (𓁹, 𓆣, 𓋹, 𓅓, 𓇋, 𓈖)</option>
+                  <option value="runes">Ancient Runes (ᚠ, ᚢ, ᚦ, ᚨ, ᚱ, ᚲ)</option>
+                  <option value="alphanumeric">Alphanumeric Digits (0 - 9)</option>
+                  <option value="custom">Custom Pictograms</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>Input Matching Rule:</label>
+                <div class="radio-row">
+                  <label>
+                    <input
+                      type="radio"
+                      name="orderMode"
+                      value="ordered"
+                      [checked]="(node.inputConfig?.orderMode ?? 'ordered') === 'ordered'"
+                      (change)="onOrderModeChange(node.id, 'ordered')"
+                    />
+                    <strong>Specific Sequence (Ordered)</strong>
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="orderMode"
+                      value="unordered"
+                      [checked]="node.inputConfig?.orderMode === 'unordered'"
+                      (change)="onOrderModeChange(node.id, 'unordered')"
+                    />
+                    <strong>Set in Any Order (Unordered)</strong>
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-group checkbox">
+                <label>
+                  <input
+                    type="checkbox"
+                    [checked]="node.inputConfig?.allowRepetition ?? false"
+                    (change)="onRepetitionToggle(node.id, $event)"
+                  />
+                  Allow Symbol Repetition (Duplicates)
+                </label>
+              </div>
+
+              <!-- Symbol Palette -->
+              <div class="palette-preview">
+                <span class="palette-label">Click symbol to append to solution key:</span>
+                <div class="symbols-strip">
+                  @for (sym of activeSymbols(node); track sym.id) {
+                    <button
+                      type="button"
+                      class="btn-sym"
+                      [title]="sym.name ?? sym.glyph"
+                      (click)="appendSymbol(node.id, sym.glyph)"
+                    >
+                      {{ sym.glyph }}
+                    </button>
+                  }
+                </div>
+              </div>
+            </div>
+
             <!-- Reward Configuration: Clue vs Sealed Envelope -->
             <div class="reward-box">
               <h4>Solving this puzzle rewards:</h4>
@@ -143,7 +223,7 @@ import type { RevealType } from '@escape-system/contracts';
   `,
   styles: [`
     .inspector-panel {
-      width: 320px;
+      width: 340px;
       background: #ffffff;
       border-left: 1px solid #dee2e6;
       padding: 20px;
@@ -170,6 +250,7 @@ import type { RevealType } from '@escape-system/contracts';
       cursor: pointer;
     }
     .form-group { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+    .form-group.checkbox { flex-direction: row; align-items: center; }
     .form-row { display: flex; gap: 8px; }
     .flex-1 { flex: 1; }
     .flex-2 { flex: 2; }
@@ -186,15 +267,33 @@ import type { RevealType } from '@escape-system/contracts';
       padding-top: 12px;
     }
     .puzzle-fields h4 { margin: 0 0 10px 0; font-size: 14px; color: #7209b7; }
-    .reward-box {
+    .symbol-config-box, .reward-box {
       background: #f8f9fa;
       border: 1px solid #e2e8f0;
       border-radius: 6px;
       padding: 12px;
       margin-top: 12px;
     }
-    .reward-box h4 { margin: 0 0 8px 0; font-size: 13px; color: #212529; }
+    .symbol-config-box h4, .reward-box h4 { margin: 0 0 8px 0; font-size: 13px; color: #212529; }
+    .radio-row { display: flex; flex-direction: column; gap: 6px; font-size: 12px; margin-top: 4px; }
     .radio-option { margin-bottom: 6px; font-size: 12px; }
+    .palette-preview { margin-top: 8px; }
+    .palette-label { font-size: 11px; color: #6c757d; display: block; margin-bottom: 6px; }
+    .symbols-strip { display: flex; flex-wrap: wrap; gap: 6px; }
+    .btn-sym {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #ffffff;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-sym:hover { background: #e0f2fe; border-color: #0369a1; }
     .empty-selection { color: #6c757d; font-size: 13px; padding-top: 40px; text-align: center; }
   `]
 })
@@ -205,6 +304,14 @@ export class NodeInspectorComponent {
     return this.graphService.nodes().filter(n => n.id !== currentId);
   }
 
+  activeSymbols(node: StudioNode): SymbolItem[] {
+    const preset = node.inputConfig?.preset ?? 'alchemy';
+    if (preset === 'custom') {
+      return node.inputConfig?.availableSymbols ?? [];
+    }
+    return SYMBOL_PRESETS[preset] ?? SYMBOL_PRESETS.alchemy;
+  }
+
   formatKey(key?: string[]): string {
     return key ? key.join(',') : '';
   }
@@ -212,6 +319,59 @@ export class NodeInspectorComponent {
   onKeyChanged(id: string, raw: string): void {
     const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
     this.graphService.updateNode(id, { solutionKey: parts });
+  }
+
+  appendSymbol(id: string, glyph: string): void {
+    const node = this.graphService.selectedNode();
+    const current = node?.solutionKey ?? [];
+    this.graphService.updateNode(id, { solutionKey: [...current, glyph] });
+  }
+
+  onPresetChange(id: string, preset: SymbolSetPreset): void {
+    const node = this.graphService.selectedNode();
+    const symbols = preset === 'custom' ? [] : (SYMBOL_PRESETS[preset] ?? SYMBOL_PRESETS.alchemy);
+    const existing = node?.inputConfig;
+
+    this.graphService.updateNode(id, {
+      inputConfig: {
+        orderMode: existing?.orderMode ?? 'ordered',
+        allowRepetition: existing?.allowRepetition ?? false,
+        length: existing?.length ?? 3,
+        preset,
+        availableSymbols: symbols
+      }
+    });
+  }
+
+  onOrderModeChange(id: string, orderMode: 'ordered' | 'unordered'): void {
+    const node = this.graphService.selectedNode();
+    const existing = node?.inputConfig;
+    const preset = existing?.preset ?? 'alchemy';
+    this.graphService.updateNode(id, {
+      inputConfig: {
+        orderMode,
+        allowRepetition: existing?.allowRepetition ?? false,
+        length: existing?.length ?? 3,
+        preset,
+        availableSymbols: existing?.availableSymbols ?? SYMBOL_PRESETS.alchemy
+      }
+    });
+  }
+
+  onRepetitionToggle(id: string, event: Event): void {
+    const allowRepetition = (event.target as HTMLInputElement).checked;
+    const node = this.graphService.selectedNode();
+    const existing = node?.inputConfig;
+    const preset = existing?.preset ?? 'alchemy';
+    this.graphService.updateNode(id, {
+      inputConfig: {
+        orderMode: existing?.orderMode ?? 'ordered',
+        allowRepetition,
+        length: existing?.length ?? 3,
+        preset,
+        availableSymbols: existing?.availableSymbols ?? SYMBOL_PRESETS.alchemy
+      }
+    });
   }
 
   onUpdate(id: string, partial: Partial<StudioNode>): void {

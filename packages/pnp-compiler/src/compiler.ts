@@ -89,7 +89,8 @@ export class PnpCompiler {
               node.puzzle.lockSigil,
               node.puzzle.solutionKey.join(''),
               generatedSeal,
-              envelopeRef
+              envelopeRef,
+              node.puzzle.inputConfig?.orderMode ?? 'ordered'
             );
           }
         }

@@ -10,6 +10,7 @@ import { NodeCanvasComponent } from './features/graph/node-canvas.component.js';
 import { NodeInspectorComponent } from './features/graph/node-inspector.component.js';
 import { AssetManagerComponent } from './features/assets/asset-manager.component.js';
 import { PnpPreviewComponent } from './features/preview/pnp-preview.component.js';
+import { ProceduralPreviewComponent } from './features/generators/procedural-preview.component.js';
 import type { NodeType } from '@escape-system/contracts';
 
 @Component({
@@ -19,7 +20,8 @@ import type { NodeType } from '@escape-system/contracts';
     NodeCanvasComponent,
     NodeInspectorComponent,
     AssetManagerComponent,
-    PnpPreviewComponent
+    PnpPreviewComponent,
+    ProceduralPreviewComponent
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -46,6 +48,13 @@ import type { NodeType } from '@escape-system/contracts';
             (click)="activeTab.set('assets')"
           >
             🎨 Figma Asset Manager
+          </button>
+          <button
+            class="tab-btn"
+            [class.active]="activeTab() === 'generators'"
+            (click)="activeTab.set('generators')"
+          >
+            ⚡ Procedural Preview
           </button>
           <button
             class="tab-btn"
@@ -78,6 +87,9 @@ import type { NodeType } from '@escape-system/contracts';
           }
           @case ('assets') {
             <app-asset-manager />
+          }
+          @case ('generators') {
+            <app-procedural-preview />
           }
           @case ('pnp') {
             <app-pnp-preview />
@@ -166,7 +178,7 @@ import type { NodeType } from '@escape-system/contracts';
 export class AppComponent {
   protected readonly graphService = inject(GraphService);
 
-  readonly activeTab = signal<'graph' | 'assets' | 'pnp'>('graph');
+  readonly activeTab = signal<'graph' | 'assets' | 'pnp' | 'generators'>('graph');
 
   addNode(type: NodeType): void {
     const defaultTitles: Record<NodeType, string> = {

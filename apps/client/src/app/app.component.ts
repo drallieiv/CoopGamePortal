@@ -8,11 +8,11 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { QuickCheckComponent } from './features/companion/quick-check.component.js';
 import { TabletopComponent } from './features/tabletop/tabletop.component.js';
-import { PnpCompiler, type PnpOutput } from '@escape-system/pnp-compiler';
-import { resolveRolesForPlayerCount } from '@escape-system/contracts';
+import { PnpCompiler } from '@escape-system/pnp-compiler';
+import type { ScenarioManifest } from '@escape-system/contracts';
 
 // Minimal mock manifest for preview in client
-const mockManifest = {
+const mockManifest: ScenarioManifest = {
   id: 'pharaoh-crypt-01',
   version: '1.0.0',
   title: 'The Pharaohs Crypt',
@@ -30,22 +30,22 @@ const mockManifest = {
   nodes: {
     room_1: {
       id: 'room_1',
-      type: 'room' as const,
+      type: 'room',
       title: 'Tomb Antechamber',
-      visibility: { type: 'common' as const },
-      content: { visuals: [], narrativeText: 'The walls echo.', physicalFallback: { format: 'sheet' as const, label: 'Sheet #1' } },
-      transitions: [{ targetNodeId: 'lock_1', condition: 'on_solve' as const, revealType: 'open_envelope' as const, targetRefId: 'Envelope #2' }]
+      visibility: { type: 'common' },
+      content: { visuals: [], narrativeText: 'The walls echo.', physicalFallback: { format: 'french_fold', label: 'Sheet #1' } },
+      transitions: [{ targetNodeId: 'lock_1', condition: 'on_solve', revealType: 'open_envelope', targetRefId: 'Envelope #2' }]
     },
     lock_1: {
       id: 'lock_1',
-      type: 'puzzle' as const,
+      type: 'puzzle',
       title: 'Anubis Lock Mechanism',
-      visibility: { type: 'role' as const, roleIds: ['engineer'] },
-      content: { visuals: [], narrativeText: 'Turn the gears.', physicalFallback: { format: 'card' as const, label: 'Card #1' } },
+      visibility: { type: 'role', roleIds: ['engineer'] },
+      content: { visuals: [], narrativeText: 'Turn the gears.', physicalFallback: { format: 'card', label: 'Card #1' } },
       puzzle: {
         lockSigil: '🜲',
         solutionKey: ['▲', '●', '◆'],
-        hints: ['Check gear ratios', 'Count teeth', 'Turn wheel twice'] as [string, string, string]
+        hints: ['Check gear ratios', 'Count teeth', 'Turn wheel twice']
       },
       transitions: []
     }

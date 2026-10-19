@@ -35,6 +35,7 @@ export interface RegisteredPuzzle {
   solutionKey: string;
   seal: string;
   envelopeRef: string;
+  orderMode?: 'ordered' | 'unordered';
 }
 
 const DECOY_SIGILS = [
@@ -73,7 +74,8 @@ export class SigilResonanceMatrix {
     lockSigil: string,
     solutionKey: string,
     seal: string,
-    envelopeRef: string
+    envelopeRef: string,
+    orderMode: 'ordered' | 'unordered' = 'ordered'
   ): void {
     if (
       !puzzleId ||
@@ -96,23 +98,35 @@ export class SigilResonanceMatrix {
       solutionKey: solutionKey.trim(),
       seal: seal.trim(),
       envelopeRef: envelopeRef.trim(),
+      orderMode
     });
   }
 
   /**
    * Verifies an input key against a registered puzzle.
-   * Tolerates leading/trailing whitespace and is case-insensitive.
+   * Supports ordered and unordered matching, accepts string or array of symbols.
    */
-  verify(puzzleId: string, inputKey: string): VerificationResult {
+  verify(puzzleId: string, inputKey: string | string[]): VerificationResult {
     const puzzle = this.puzzles.get(puzzleId);
-    if (!puzzle || typeof inputKey !== 'string') {
+    if (!puzzle || !inputKey) {
       return { valid: false };
     }
 
-    const normalizedInput = inputKey.trim().toUpperCase();
-    const normalizedSolution = puzzle.solutionKey.trim().toUpperCase();
+    const inputArr = Array.isArray(inputKey)
+      ? inputKey.map(s => s.trim().toUpperCase())
+      : (inputKey.includes(',')
+          ? inputKey.split(',').map(s => s.trim().toUpperCase())
+          : Array.from(inputKey.trim().toUpperCase()));
 
-    if (normalizedInput === normalizedSolution) {
+    const solArr = puzzle.solutionKey.includes(',')
+      ? puzzle.solutionKey.split(',').map(s => s.trim().toUpperCase())
+      : Array.from(puzzle.solutionKey.trim().toUpperCase());
+
+    const isMatch = puzzle.orderMode === 'unordered'
+      ? [...inputArr].sort().join('') === [...solArr].sort().join('')
+      : inputArr.join('') === solArr.join('');
+
+    if (isMatch) {
       return {
         valid: true,
         seal: puzzle.seal,

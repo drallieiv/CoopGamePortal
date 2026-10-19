@@ -48,6 +48,27 @@ describe('SigilResonanceMatrix', () => {
     assert.deepEqual(res, { valid: false });
   });
 
+  it('verifyShouldSupportUnorderedSymbolsWhenOrderModeIsUnordered', () => {
+    const matrix = new SigilResonanceMatrix('seed-unordered');
+    matrix.registerPuzzle('pz-runes', '🜲', '▲●◆', 'SEAL-RUNES', 'Envelope #2', 'unordered');
+
+    // Out of order match
+    assert.equal(matrix.verify('pz-runes', ['●', '▲', '◆']).valid, true);
+    assert.equal(matrix.verify('pz-runes', '◆●▲').valid, true);
+    assert.equal(matrix.verify('pz-runes', '▲,●,◆').valid, true);
+
+    // Mismatched symbol fails
+    assert.equal(matrix.verify('pz-runes', ['▲', '●', '■']).valid, false);
+  });
+
+  it('verifyShouldEnforceOrderWhenOrderModeIsOrdered', () => {
+    const matrix = new SigilResonanceMatrix('seed-ordered');
+    matrix.registerPuzzle('pz-code', '🗝', '▲●◆', 'SEAL-ORDER', 'Envelope #3', 'ordered');
+
+    assert.equal(matrix.verify('pz-code', ['●', '▲', '◆']).valid, false);
+    assert.equal(matrix.verify('pz-code', ['▲', '●', '◆']).valid, true);
+  });
+
   it('verifyShouldReturnValidFalseWhenPuzzleNotRegistered', () => {
     const matrix = new SigilResonanceMatrix('seed-check');
     const res = matrix.verify('non-existent-puzzle', 'N34W12');

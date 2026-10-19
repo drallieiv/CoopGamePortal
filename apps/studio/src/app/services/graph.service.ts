@@ -4,8 +4,10 @@ import type {
   ScenarioNode,
   NodeType,
   VisibilityScope,
-  RevealType
+  RevealType,
+  PuzzleInputConfig
 } from '@escape-system/contracts';
+import { SYMBOL_PRESETS } from '@escape-system/contracts';
 
 export interface StudioNode {
   id: string;
@@ -17,6 +19,7 @@ export interface StudioNode {
   lockSigil?: string;
   solutionKey?: string[];
   hints?: [string, string, string];
+  inputConfig?: PuzzleInputConfig;
   targetNodeId?: string;
   revealType?: RevealType;
   targetRefId?: string;
@@ -161,7 +164,8 @@ export class GraphService {
         puzzle: node.type === 'puzzle' ? {
           lockSigil: node.lockSigil ?? '✦',
           solutionKey: node.solutionKey ?? ['A', 'B'],
-          hints: node.hints ?? ['Nudge', 'Insight', 'Solution']
+          hints: node.hints ?? ['Nudge', 'Insight', 'Solution'],
+          inputConfig: node.inputConfig
         } : undefined,
         transitions: node.targetNodeId && node.revealType ? [{
           targetNodeId: node.targetNodeId,
@@ -219,7 +223,14 @@ export class GraphService {
     this.updateNode(clue.id, {
       lockSigil: '☽',
       solutionKey: ['RA'],
-      narrativeText: 'Decipher the celestial glyphs to find the partial key.'
+      narrativeText: 'Decipher the celestial glyphs to find the partial key.',
+      inputConfig: {
+        orderMode: 'unordered',
+        allowRepetition: false,
+        length: 2,
+        preset: 'egyptian',
+        availableSymbols: SYMBOL_PRESETS.egyptian
+      }
     });
 
     const lock = this.addNode({
@@ -232,7 +243,14 @@ export class GraphService {
     this.updateNode(lock.id, {
       lockSigil: '🜲',
       solutionKey: ['▲', '●', '◆'],
-      narrativeText: 'Mechanical lock. Align the three copper gears.'
+      narrativeText: 'Mechanical lock. Align the three copper gears.',
+      inputConfig: {
+        orderMode: 'ordered',
+        allowRepetition: false,
+        length: 3,
+        preset: 'alchemy',
+        availableSymbols: SYMBOL_PRESETS.alchemy
+      }
     });
 
     const vault = this.addNode({
