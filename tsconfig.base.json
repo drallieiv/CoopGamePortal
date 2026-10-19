@@ -18,14 +18,6 @@
     "exactOptionalPropertyTypes": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "paths": {
-      "@escape-system/contracts": ["./packages/contracts/dist/index.d.ts"],
-      "@escape-system/contracts/*": ["./packages/contracts/dist/*.d.ts"],
-      "@escape-system/generators": ["./packages/generators/dist/index.d.ts"],
-      "@escape-system/pnp-compiler": ["./packages/pnp-compiler/dist/index.d.ts"],
-      "@escape-system/server": ["./packages/server/dist/index.d.ts"],
-      "@escape-system/hub": ["./apps/hub/dist/index.d.ts"]
-    }
+    "forceConsistentCasingInFileNames": true
   }
 }

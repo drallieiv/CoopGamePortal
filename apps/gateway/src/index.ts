@@ -104,6 +104,12 @@ export class PortalGateway {
     }
 
     // 3. Studio SPA Static Files (/studio)
+    if (parsedPath === '/studio') {
+      res.writeHead(301, { Location: '/studio/' });
+      res.end();
+      return;
+    }
+
     if (parsedPath.startsWith('/studio')) {
       const subPath = parsedPath.replace(/^\/studio\/?/, '');
       this.serveStatic(res, this.studioDistDir, subPath);
