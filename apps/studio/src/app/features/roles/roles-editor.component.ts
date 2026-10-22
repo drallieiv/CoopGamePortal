@@ -1,8 +1,7 @@
 import {
   Component,
   ChangeDetectionStrategy,
-  inject,
-  signal
+  inject
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -165,7 +164,10 @@ export class RolesEditorComponent {
   getSlotRole(playerKey: string, slotIdx: number): string {
     const matrix = this.graphService.roleAggregation();
     const slots = matrix[playerKey] ?? [];
-    return slots[slotIdx]?.roles?.[0] ?? '';
+    const item = slots[slotIdx];
+    if (!item) return '';
+    if (Array.isArray(item)) return item[0] ?? '';
+    return item.roles?.[0] ?? '';
   }
 
   setSlotRole(playerKey: string, slotIdx: number, roleId: string): void {

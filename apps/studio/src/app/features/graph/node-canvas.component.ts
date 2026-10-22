@@ -345,6 +345,7 @@ export class NodeCanvasComponent {
             const endX = node.x;
             const endY = node.y + 48;
             const deltaX = Math.abs(endX - startX) * 0.5;
+            const d = `M ${startX} ${startY} C ${startX + deltaX} ${startY}, ${endX - deltaX} ${endY}, ${endX} ${endY}`;
             wires.push({
               key: `combine-a-${srcA.id}-${node.id}`,
               sourceId: srcA.id,
@@ -366,6 +367,7 @@ export class NodeCanvasComponent {
             const endX = node.x;
             const endY = node.y + 98;
             const deltaX = Math.abs(endX - startX) * 0.5;
+            const d = `M ${startX} ${startY} C ${startX + deltaX} ${startY}, ${endX - deltaX} ${endY}, ${endX} ${endY}`;
             wires.push({
               key: `combine-b-${srcB.id}-${node.id}`,
               sourceId: srcB.id,
@@ -440,7 +442,7 @@ export class NodeCanvasComponent {
     this.linkingSourceNode.set(null);
   }
 
-  onNodeMouseUp(node: StudioNode, event: MouseEvent): void {
+  onNodeMouseUp(node: StudioNode, _event: MouseEvent): void {
     const src = this.linkingSourceNode();
     if (src && src.id !== node.id) {
       this.graphService.connectNodes(src.id, node.id, 'provide_clue');

@@ -91,15 +91,15 @@ describe('GraphService (Studio Visual Scenario Node Graph)', () => {
           type: 'room',
           title: 'Room One',
           visibility: { type: 'common' },
-          content: { visuals: [] },
-          transitions: [{ targetNodeId: 'n2', condition: 'on_solve', revealType: 'open_envelope' }]
+          content: { visuals: [], physicalFallback: { format: 'french_fold', label: 'Sheet #1' } },
+          transitions: [{ targetNodeId: 'n2', condition: 'on_solve', revealType: 'open_envelope', targetRefId: 'Envelope #2' }]
         },
         n2: {
           id: 'n2',
           type: 'puzzle',
           title: 'Puzzle Two',
           visibility: { type: 'common' },
-          content: { visuals: [] },
+          content: { visuals: [], physicalFallback: { format: 'card', label: 'Card #1' } },
           transitions: []
         }
       },
