@@ -51,15 +51,14 @@ export class GraphService {
   readonly difficulty = signal<1 | 2 | 3 | 4 | 5>(3);
 
   readonly roles = signal<RoleDefinition[]>([
-    { id: 'cartographer', name: 'Cartographer', exclusiveDossiers: ['star_map'] },
-    { id: 'engineer', name: 'Engineer', exclusiveDossiers: ['gear_diagrams'] }
+    { id: 'default', name: 'Default Role', exclusiveDossiers: [] }
   ]);
 
   readonly roleAggregation = signal<RoleAggregationMatrix>({
-    '4_players': [{ roles: ['cartographer'] }, { roles: ['engineer'] }],
-    '3_players': [{ roles: ['cartographer'] }, { roles: ['engineer'] }],
-    '2_players': [{ roles: ['cartographer'] }, { roles: ['engineer'] }],
-    '1_player_solo': [{ roles: ['cartographer', 'engineer'] }]
+    '4_players': [{ roles: ['default'] }, { roles: ['default'] }, { roles: ['default'] }, { roles: ['default'] }],
+    '3_players': [{ roles: ['default'] }, { roles: ['default'] }, { roles: ['default'] }],
+    '2_players': [{ roles: ['default'] }, { roles: ['default'] }],
+    '1_player_solo': [{ roles: ['default'] }]
   });
 
   protected readonly _nodes = signal<StudioNode[]>([]);

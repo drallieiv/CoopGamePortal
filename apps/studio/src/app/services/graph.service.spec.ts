@@ -15,6 +15,11 @@ describe('GraphService (Studio Visual Scenario Node Graph)', () => {
     assert.equal(service.nodes()[0].title, 'Starting Chamber');
     assert.equal(service.nodes()[0].type, 'room');
     assert.equal(service.selectedNodeId(), service.nodes()[0].id);
+
+    // Initialized with a single 'default' role
+    assert.equal(service.roles().length, 1);
+    assert.equal(service.roles()[0].id, 'default');
+    assert.equal(service.roles()[0].name, 'Default Role');
   });
 
   it('should add new node and update coordinates', () => {
